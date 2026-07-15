@@ -1,0 +1,59 @@
+candidate:
+  name: Tayo Kayode
+  base_location: Tokyo, Japan
+  years_experience: 13
+  target_geographies:
+  - Japan/Tokyo
+  - Singapore
+  - Thailand/Bangkok
+  - Taiwan/Taipei
+  - United States/New York
+  languages:
+    English: Native
+    Thai: Conversational
+    Mandarin: Functional
+    Japanese: Functional
+  hard_language_constraints:
+  - business/native Japanese required
+  - business/native Chinese or Mandarin required
+seniority:
+  startup_sme_target:
+  - Director
+  - Head
+  - VP
+  - Vice President
+  large_corporate_accept:
+  - Principal
+  - Staff
+  - Senior Lead
+  - Exceptional-scope Senior Manager
+  - Director
+  - Head
+  - VP
+  evaluate_scope_not_title: true
+role_families:
+- Product
+- Product Operations
+- Strategy & Operations
+- Marketplace
+- Commerce/eCommerce
+- Logistics Product
+- Network Planning
+- AI Transformation
+verified_evidence_domains:
+- marketplace platforms
+- seller systems
+- payments and reconciliation
+- logistics
+- ecommerce
+- consumer product
+- forecasting
+- network planning
+- omnichannel
+- UX
+- AI-enabled workflows
+- regional cross-functional leadership
+resume_versions:
+  executive_base: General executive roles
+  product_commerce: Product, marketplace, commerce and travel-tech
+  product_operations: Product operations, logistics, strategy and AI-enabled operations

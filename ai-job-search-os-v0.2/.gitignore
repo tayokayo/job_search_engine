@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+job_os.sqlite
+credentials.json
+token.json
+.env

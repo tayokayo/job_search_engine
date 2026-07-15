@@ -1,0 +1,27 @@
+opportunity_weights:
+  functional_fit: 18
+  domain_fit: 16
+  seniority_scope: 15
+  verified_evidence_fit: 15
+  leadership_scope: 10
+  career_trajectory: 8
+  geography: 6
+  language_feasibility: 5
+  ai_relevance: 4
+  desired_company: 3
+company_weights:
+  background_fit: 20
+  operating_complexity: 15
+  product_operations_intersection: 15
+  ai_transformation_relevance: 10
+  geographic_fit: 10
+  international_environment: 10
+  future_role_likelihood: 10
+  desired_company: 10
+hard_constraints:
+- outside target geography
+- business/native Japanese required
+- business/native Chinese/Mandarin required
+classification:
+  A_min: 80
+  B_min: 60

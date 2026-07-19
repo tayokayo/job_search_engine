@@ -128,6 +128,130 @@ CREATE TABLE IF NOT EXISTS job_eligibility_decisions (
   complete_description INTEGER NOT NULL,
   decided_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS job_evidence_mapping_runs (
+  id INTEGER PRIMARY KEY,
+  job_id INTEGER NOT NULL REFERENCES jobs(id),
+  source_snapshot_id INTEGER NOT NULL REFERENCES job_source_snapshots(id),
+  job_content_checksum TEXT NOT NULL,
+  candidate_evidence_checksum TEXT NOT NULL,
+  extraction_version TEXT NOT NULL,
+  mapping_version TEXT NOT NULL,
+  extraction_provider TEXT NOT NULL,
+  extraction_model TEXT,
+  mapping_provider TEXT NOT NULL,
+  mapping_model TEXT,
+  created_at TEXT NOT NULL,
+  human_override INTEGER NOT NULL DEFAULT 0,
+  override_reason TEXT,
+  override_reviewer TEXT,
+  human_review_status TEXT NOT NULL CHECK(human_review_status IN ('not_required', 'pending', 'reviewed')),
+  UNIQUE(job_id, job_content_checksum, candidate_evidence_checksum, extraction_version, mapping_version)
+);
+CREATE INDEX IF NOT EXISTS idx_job_evidence_mapping_runs_job
+ON job_evidence_mapping_runs(job_id, created_at);
+
+CREATE TABLE IF NOT EXISTS job_requirements (
+  id INTEGER PRIMARY KEY,
+  run_id INTEGER NOT NULL REFERENCES job_evidence_mapping_runs(id),
+  requirement_id TEXT NOT NULL,
+  sequence_number INTEGER NOT NULL,
+  source_text TEXT NOT NULL,
+  source_span_start INTEGER NOT NULL,
+  source_span_end INTEGER NOT NULL,
+  normalized_requirement TEXT NOT NULL,
+  category TEXT NOT NULL CHECK(category IN (
+    'responsibilities', 'leadership_scope', 'seniority',
+    'functional_experience', 'domain_experience', 'geography', 'language',
+    'years_of_experience', 'education', 'technical_skills',
+    'commercial_or_operational_ownership', 'other_explicit_constraints'
+  )),
+  importance TEXT NOT NULL CHECK(importance IN ('high', 'medium', 'low')),
+  requirement_status TEXT NOT NULL CHECK(requirement_status IN ('mandatory', 'preferred', 'unspecified')),
+  explicitness TEXT NOT NULL CHECK(explicitness IN ('explicit', 'inferred')),
+  source_url TEXT NOT NULL,
+  source_snapshot_id INTEGER NOT NULL REFERENCES job_source_snapshots(id),
+  job_content_checksum TEXT NOT NULL,
+  extraction_confidence REAL NOT NULL CHECK(extraction_confidence >= 0 AND extraction_confidence <= 1),
+  UNIQUE(run_id, requirement_id),
+  UNIQUE(run_id, sequence_number)
+);
+CREATE INDEX IF NOT EXISTS idx_job_requirements_run
+ON job_requirements(run_id, sequence_number);
+
+CREATE TABLE IF NOT EXISTS job_requirement_mappings (
+  requirement_row_id INTEGER PRIMARY KEY REFERENCES job_requirements(id),
+  assessment TEXT NOT NULL CHECK(assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  supporting_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  supporting_claims_json TEXT NOT NULL DEFAULT '[]',
+  verified_leaf_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  verified_leaf_claims_json TEXT NOT NULL DEFAULT '[]',
+  unsupported_gap_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  unsupported_gap_claims_json TEXT NOT NULL DEFAULT '[]',
+  explanation TEXT NOT NULL,
+  mapping_confidence REAL NOT NULL CHECK(mapping_confidence >= 0 AND mapping_confidence <= 1),
+  human_review_flag INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS job_requirement_ai_proposals (
+  id INTEGER PRIMARY KEY,
+  requirement_row_id INTEGER NOT NULL REFERENCES job_requirements(id),
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  mapper_version TEXT NOT NULL,
+  proposed_assessment TEXT NOT NULL CHECK(proposed_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  supporting_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  unsupported_gap_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  explanation TEXT NOT NULL,
+  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+  raw_response_json TEXT NOT NULL,
+  validation_status TEXT NOT NULL CHECK(validation_status IN ('accepted', 'rejected')),
+  validation_errors_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  UNIQUE(requirement_row_id, provider, model, mapper_version)
+);
+CREATE INDEX IF NOT EXISTS idx_job_requirement_ai_proposals_requirement
+ON job_requirement_ai_proposals(requirement_row_id, created_at);
+
+CREATE TABLE IF NOT EXISTS job_requirement_calibrations (
+  id INTEGER PRIMARY KEY,
+  requirement_row_id INTEGER NOT NULL REFERENCES job_requirements(id),
+  calibration_version TEXT NOT NULL,
+  deterministic_assessment TEXT NOT NULL CHECK(deterministic_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  ai_proposal_id INTEGER REFERENCES job_requirement_ai_proposals(id),
+  ai_proposed_assessment TEXT CHECK(ai_proposed_assessment IS NULL OR ai_proposed_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  final_assessment TEXT NOT NULL CHECK(final_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  supporting_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  verified_leaf_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  unsupported_gap_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  hard_constraint_failed INTEGER NOT NULL DEFAULT 0,
+  hard_constraint_reason TEXT,
+  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+  review_reason TEXT,
+  review_status TEXT NOT NULL CHECK(review_status IN ('not_required', 'pending', 'reviewed')),
+  created_at TEXT NOT NULL,
+  UNIQUE(requirement_row_id, calibration_version)
+);
+CREATE INDEX IF NOT EXISTS idx_job_requirement_calibrations_review
+ON job_requirement_calibrations(review_status, final_assessment);
+
+CREATE TABLE IF NOT EXISTS job_requirement_human_reviews (
+  id INTEGER PRIMARY KEY,
+  requirement_row_id INTEGER NOT NULL REFERENCES job_requirements(id),
+  calibration_id INTEGER NOT NULL REFERENCES job_requirement_calibrations(id),
+  deterministic_assessment TEXT NOT NULL CHECK(deterministic_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  ai_proposed_assessment TEXT CHECK(ai_proposed_assessment IS NULL OR ai_proposed_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  final_assessment TEXT NOT NULL CHECK(final_assessment IN ('confirmed', 'partial', 'unsupported', 'contradicted', 'unknown')),
+  supporting_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  unsupported_gap_claim_ids_json TEXT NOT NULL DEFAULT '[]',
+  hard_constraint_failed INTEGER NOT NULL DEFAULT 0,
+  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+  review_reason TEXT NOT NULL,
+  reviewer TEXT NOT NULL,
+  reviewed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_job_requirement_human_reviews_requirement
+ON job_requirement_human_reviews(requirement_row_id, reviewed_at);
 """
 
 

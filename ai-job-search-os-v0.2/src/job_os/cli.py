@@ -23,9 +23,18 @@ from .candidate_evidence import (
 )
 from .enrichment import FixtureRetriever, PublicHttpRetriever, enrich_opportunities
 from .enrichment_inspection import show_enrichment
+from .evidence_map_inspection import show_evidence_map
+from .mapping_calibration import (
+    CapturedAIProvider,
+    NoAIProvider,
+    calibrate_jobs,
+    review_requirement,
+    show_review_queue,
+)
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
+from .requirement_mapping import map_jobs
 from .source_resolver import (
     CapturedSearchProvider,
     EmptySearchProvider,
@@ -355,6 +364,96 @@ def show_enrichment_command(args):
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
+def map_evidence_command(args):
+    if args.human_override and not args.job_id:
+        raise SystemExit("--human-override requires at least one explicit --job-id")
+    if args.human_override and not args.override_reason:
+        raise SystemExit("--human-override requires --override-reason")
+    conn = connect(args.db)
+    try:
+        result = map_jobs(
+            conn,
+            job_ids=args.job_id,
+            candidate_evidence_path=args.candidate_evidence_path,
+            human_override=args.human_override,
+            override_reason=args.override_reason,
+            override_reviewer=args.override_reviewer,
+        )
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_evidence_map_command(args):
+    database = Path(args.db).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        result = show_evidence_map(
+            conn, args.job_id, candidate_evidence_path=args.candidate_evidence_path
+        )
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def calibrate_evidence_command(args):
+    provider = (
+        CapturedAIProvider.from_json(args.ai_proposals_json)
+        if args.ai_proposals_json
+        else NoAIProvider()
+    )
+    conn = connect(args.db)
+    try:
+        result = calibrate_jobs(
+            conn,
+            provider=provider,
+            job_ids=args.job_id,
+            candidate_evidence_path=args.candidate_evidence_path,
+        )
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_evidence_review_queue_command(args):
+    database = Path(args.db).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        result = show_review_queue(conn, job_ids=args.job_id)
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def review_evidence_command(args):
+    conn = connect(args.db)
+    try:
+        result = review_requirement(
+            conn,
+            requirement_row_id=args.requirement_row_id,
+            final_assessment=args.assessment,
+            reviewer=args.reviewer,
+            review_reason=args.reason,
+            supporting_claim_ids=tuple(args.supporting_claim_id) if args.supporting_claim_id is not None else None,
+            unsupported_gap_claim_ids=tuple(args.gap_claim_id) if args.gap_claim_id is not None else None,
+            confidence=args.confidence,
+            candidate_evidence_path=args.candidate_evidence_path,
+        )
+    except (KeyError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
 def _add_input_options(parser: argparse.ArgumentParser) -> None:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input-json", help="connector-exported Gmail message JSON")
@@ -415,6 +514,53 @@ def main(argv=None):
     inspection.add_argument("--job-id", type=int, required=True)
     inspection.add_argument("--db", default="job_os.sqlite")
     inspection.set_defaults(func=show_enrichment_command)
+
+    mapping = sub.add_parser("map-evidence")
+    mapping.add_argument("--job-id", action="append", type=int)
+    mapping.add_argument("--db", default="job_os.sqlite")
+    mapping.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    mapping.add_argument("--human-override", action="store_true")
+    mapping.add_argument("--override-reason")
+    mapping.add_argument("--override-reviewer")
+    mapping.set_defaults(func=map_evidence_command)
+
+    evidence_inspection = sub.add_parser("show-evidence-map")
+    evidence_inspection.add_argument("--job-id", type=int, required=True)
+    evidence_inspection.add_argument("--db", default="job_os.sqlite")
+    evidence_inspection.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    evidence_inspection.set_defaults(func=show_evidence_map_command)
+
+    calibration = sub.add_parser("calibrate-evidence-map")
+    calibration.add_argument("--job-id", action="append", type=int)
+    calibration.add_argument("--db", default="job_os.sqlite")
+    calibration.add_argument("--ai-proposals-json", help="captured provider-neutral AI proposals")
+    calibration.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    calibration.set_defaults(func=calibrate_evidence_command)
+
+    review_queue = sub.add_parser("show-evidence-review-queue")
+    review_queue.add_argument("--job-id", action="append", type=int)
+    review_queue.add_argument("--db", default="job_os.sqlite")
+    review_queue.set_defaults(func=show_evidence_review_queue_command)
+
+    review = sub.add_parser("review-evidence-map")
+    review.add_argument("--requirement-row-id", type=int, required=True)
+    review.add_argument("--assessment", choices=sorted({"confirmed", "partial", "unsupported", "contradicted", "unknown"}), required=True)
+    review.add_argument("--supporting-claim-id", action="append")
+    review.add_argument("--gap-claim-id", action="append")
+    review.add_argument("--confidence", type=float, default=1.0)
+    review.add_argument("--reason", required=True)
+    review.add_argument("--reviewer", required=True)
+    review.add_argument("--db", default="job_os.sqlite")
+    review.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    review.set_defaults(func=review_evidence_command)
 
     for name in [
         "evaluate",

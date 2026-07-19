@@ -77,3 +77,30 @@ PYTHONPATH=src python3 -m job_os.cli enrich \
 Start reviewed hints from `config/official_source_hints.example.yaml`; keep operational hints and captured results under the gitignored `data/private/` directory. Resolver candidates must match company, title, and location before acceptance. Accepted and rejected candidates are recorded with reasons, while unsafe schemes, private-network targets, untrusted redirects, and oversized responses are rejected.
 
 `show-enrichment` opens the database read-only and displays selected and alternative values, provenance, source precedence, retrieval state, checksums, resolver decisions, and failure reasons. It does not display raw email content, OAuth data, or candidate-private information. The stored eligibility decision is deliberately non-numeric: verified official/ATS records are eligible, sufficiently complete LinkedIn-only records are conditionally eligible, partial/conflicting records require manual review, and unavailable/closed records are ineligible. This checkpoint does not implement opportunity scoring.
+
+## Requirement extraction and evidence mapping
+
+Extract explicit requirements from sufficiently complete eligible opportunities and map them to the validated candidate-evidence index:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli map-evidence --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli show-evidence-map --job-id 1 --db job_os.sqlite
+```
+
+`map-evidence` is deterministic and retry-safe. By default it selects only `eligible` and `conditionally_eligible` jobs whose descriptions are marked complete. A blocked job can be mapped only by naming it with `--job-id`, adding `--human-override`, and recording an `--override-reason`; this exception remains inspectable in the mapping run.
+
+Requirements retain their exact source span, source snapshot, and job-content checksum. Candidate mappings retain cited claims, resolved verified leaves, explicit unsupported gaps, and the candidate-evidence checksum. `show-evidence-map` opens SQLite read-only and reports freshness; a job-content or candidate-evidence checksum change makes the prior mapping stale. Unsupported or absent evidence never becomes affirmative evidence, and exact language levels and metric units are preserved. No numerical score or opportunity grade is calculated.
+
+Calibrate deterministic mappings with provider-neutral captured AI proposals, inspect the local review queue, and record an explicit human decision without overwriting either machine result:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli calibrate-evidence-map \
+  --db job_os.sqlite --ai-proposals-json data/private/evidence_mapping_ai.json
+PYTHONPATH=src python3 -m job_os.cli show-evidence-review-queue --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli review-evidence-map \
+  --db job_os.sqlite --requirement-row-id 123 --assessment partial \
+  --supporting-claim-id claim_id --reason "Reviewed against source evidence" \
+  --reviewer local-reviewer
+```
+
+AI proposals are immutable, retain provider/model metadata, and are validated against the candidate-evidence index. Unknown IDs, unsupported gaps used as affirmative evidence, metric or attribution changes, leadership-scope upgrades, and hard-constraint overrides are rejected. Business/native Japanese or Mandarin requirements remain deterministic hard failures when validated proficiency is lower. Review-queue inspection is read-only; human decisions are appended separately.

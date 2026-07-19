@@ -1,0 +1,48 @@
+{
+  "responses": {
+    "https://linkedin.com/jobs/view/4441439743": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"Sr. Manager, SEA NA\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Johnson & Johnson MedTech\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"employmentType\":\"FULL_TIME\",\"datePosted\":\"2026-07-16\",\"description\":\"About the role\\nThis senior manager role coordinates regional operating plans for Southeast Asia and works with commercial and supply-chain stakeholders.\\nResponsibilities\\nLead annual planning and operating reviews across the region.\\nPartner with country leaders to translate strategy into execution.\\nQualifications\\nTen years of relevant operating experience.\\nEnglish fluency is required.\"}</script></head><body><a href=\"https://careers.jnj.example/jobs/sea-na-4441439743\">Apply on company site</a><a href=\"https://jobs.smartrecruiters.com/JNJ/4441439743\">View job on ATS</a><a href=\"https://careers.jnj.example/careers\">Careers</a></body></html>"
+    },
+    "https://careers.jnj.example/jobs/sea-na-4441439743": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"url\":\"https://careers.jnj.example/jobs/sea-na-4441439743\",\"title\":\"Sr. Manager, SEA NA\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Johnson & Johnson MedTech\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"jobLocationType\":\"HYBRID\",\"employmentType\":\"FULL_TIME\",\"datePosted\":\"2026-07-16\",\"validThrough\":\"2026-08-15\",\"description\":\"About the role\\nThis senior manager role coordinates regional operating plans for Southeast Asia and works with commercial, finance, and supply-chain stakeholders.\\nResponsibilities\\nLead annual planning and operating reviews across the region.\\nPartner with country leaders to translate strategy into execution and monitor delivery.\\nQualifications\\nTen years of relevant operating experience in a regional organization.\\nEnglish fluency is required for stakeholder communication.\"}</script></head><body><main>Official company job posting</main><a href=\"https://careers.jnj.example/careers\">Careers</a></body></html>"
+    },
+    "https://jobs.smartrecruiters.com/JNJ/4441439743": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"Sr. Manager, SEA NA\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Johnson & Johnson MedTech\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"employmentType\":\"FULL_TIME\",\"description\":\"Responsibilities\\nLead annual planning and operating reviews across the region.\\nQualifications\\nTen years of relevant operating experience.\"}</script></head><body><main>Employer-controlled ATS copy</main></body></html>"
+    },
+    "https://linkedin.com/jobs/view/4418114331": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"Bureau Product Head\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"ADVANCE.AI\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Singapore\"}},\"jobLocationType\":\"ON_SITE\",\"employmentType\":\"FULL_TIME\",\"datePosted\":\"2026-07-15\",\"description\":\"About the role\\nThe product head owns the roadmap for a regional decisioning platform and works with risk, data, and commercial stakeholders.\\nResponsibilities\\nLead product strategy and quarterly roadmap decisions.\\nManage delivery priorities with engineering and customer teams.\\nQualifications\\nEight years of product-management experience in financial technology.\\nEnglish is required for regional collaboration.\"}</script></head><body><main>Public LinkedIn job content</main></body></html>"
+    },
+    "https://linkedin.com/jobs/view/4441617824": {
+      "status_code": 404,
+      "retrieval_status": "unavailable",
+      "failure_reason": "public posting returned HTTP 404",
+      "body": ""
+    },
+    "https://linkedin.com/jobs/view/4440230946": {
+      "status_code": 410,
+      "retrieval_status": "closed",
+      "failure_reason": "posting explicitly reports that it is closed",
+      "body": "<html><body><main>This job is closed and no longer accepting applications.</main></body></html>"
+    },
+    "https://linkedin.com/jobs/view/4418598063": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"People Operations Business Partner\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Grab\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"employmentType\":\"FULL_TIME\",\"description\":\"About the role\\nPartner with business leaders on the people operating model and regional organization priorities.\\nResponsibilities\\nAdvise leaders on organization planning and employee programs.\\nLead stakeholder reviews across business functions.\\nQualifications\\nRelevant people-partner experience in a regional company.\\nEnglish and Thai language skills are required.\"}</script></head><body><a href=\"https://careers.grab.example/jobs/people-partner-4418598063\">Apply</a></body></html>"
+    },
+    "https://careers.grab.example/jobs/people-partner-4418598063": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"Senior People Operations Business Partner\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Grab\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"employmentType\":\"FULL_TIME\",\"description\":\"About the role\\nThe senior people operations business partner supports regional leaders and owns the people operating cadence.\\nResponsibilities\\nAdvise executives on organization planning and employee programs.\\nLead stakeholder reviews across business functions and mentor partner teams.\\nQualifications\\nTen years of people-partner experience in a regional company.\\nEnglish and Thai language skills are required.\"}</script></head><body><main>Official posting with a more senior title</main><a href=\"https://careers.grab.example/careers\">Careers</a></body></html>"
+    },
+    "https://linkedin.com/jobs/view/4382237942": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"title\":\"Business & Performance Analytics - Merchant,Shopeefood\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Shopee\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"employmentType\":\"FULL_TIME\",\"description\":\"This role supports merchant performance analytics and planning.\"}</script></head><body><a href=\"https://jobs.smartrecruiters.com/Shopee/4382237942\">Apply on employer ATS</a></body></html>"
+    },
+    "https://jobs.smartrecruiters.com/Shopee/4382237942": {
+      "status_code": 200,
+      "body": "<html><head><script type=\"application/ld+json\">{\"@context\":\"https://schema.org\",\"@type\":\"JobPosting\",\"url\":\"https://jobs.smartrecruiters.com/Shopee/4382237942\",\"title\":\"Business & Performance Analytics - Merchant,Shopeefood\",\"hiringOrganization\":{\"@type\":\"Organization\",\"name\":\"Shopee\"},\"jobLocation\":{\"@type\":\"Place\",\"address\":{\"addressLocality\":\"Bangkok\"}},\"jobLocationType\":\"ON_SITE\",\"employmentType\":\"FULL_TIME\",\"datePosted\":\"2026-07-14\",\"description\":\"About the role\\nThe analytics role supports merchant planning, performance reporting, and operating decisions for the food-delivery business.\\nResponsibilities\\nBuild recurring merchant performance views and explain changes to stakeholders.\\nSupport planning reviews with commercial and operations teams.\\nQualifications\\nStrong SQL and analytical experience in a marketplace environment.\\nEnglish and Thai communication skills are required.\"}</script></head><body><main>Official ATS posting</main></body></html>"
+    }
+  }
+}

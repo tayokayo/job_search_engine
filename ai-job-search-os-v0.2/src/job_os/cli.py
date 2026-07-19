@@ -20,6 +20,7 @@ from .candidate_evidence import (
     load_candidate_evidence,
     validate_candidate_evidence,
 )
+from .enrichment import FixtureRetriever, PublicHttpRetriever, enrich_opportunities
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
@@ -297,6 +298,29 @@ def validate_candidate_evidence_command(args):
     print(json.dumps(result, sort_keys=True))
 
 
+def enrich_command(args):
+    conn = connect(args.db)
+    retriever = (
+        FixtureRetriever.from_json(args.responses_json)
+        if args.responses_json
+        else PublicHttpRetriever(timeout_seconds=args.timeout)
+    )
+    try:
+        result = enrich_opportunities(
+            conn,
+            retriever,
+            job_ids=args.job_id,
+            max_results=args.max_results,
+            refresh=args.refresh,
+        )
+    finally:
+        conn.close()
+        close = getattr(retriever, "close", None)
+        if close:
+            close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
 def _add_input_options(parser: argparse.ArgumentParser) -> None:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input-json", help="connector-exported Gmail message JSON")
@@ -333,8 +357,19 @@ def main(argv=None):
     )
     evidence.set_defaults(func=validate_candidate_evidence_command)
 
+    enrichment = sub.add_parser("enrich")
+    enrichment.add_argument("--db", default="job_os.sqlite")
+    enrichment.add_argument("--job-id", action="append", type=int)
+    enrichment.add_argument("--max-results", type=int, default=25)
+    enrichment.add_argument("--refresh", action="store_true")
+    enrichment.add_argument(
+        "--responses-json",
+        help="sanitized public-response fixture for deterministic offline verification",
+    )
+    enrichment.add_argument("--timeout", type=float, default=15.0)
+    enrichment.set_defaults(func=enrich_command)
+
     for name in [
-        "enrich",
         "evaluate",
         "check-watchlist",
         "generate-strategy",

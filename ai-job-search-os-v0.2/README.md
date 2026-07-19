@@ -50,3 +50,16 @@ PYTHONPATH=src python -m job_os.cli validate-candidate-evidence
 ```
 
 Use `--candidate-evidence-path <path>` or the `CANDIDATE_EVIDENCE_PATH` environment variable to validate another artifact. Personal contact details are prohibited in the public artifact; a future private contact source belongs at the gitignored `config/candidate_private.yaml`.
+
+## Public job verification and enrichment
+
+Enrich opportunities already stored in SQLite using unauthenticated public pages:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli enrich --db job_os.sqlite --max-results 25
+PYTHONPATH=src python3 -m job_os.cli enrich --db job_os.sqlite --refresh
+```
+
+Use `--job-id <database-id>` to limit the run; repeat the option for multiple jobs. `--refresh` rechecks previously enriched records. Tests and offline audits can supply sanitized captured responses with `--responses-json <path>`.
+
+Enrichment follows official-company, official ATS, public LinkedIn, then alert-email precedence. It stores immutable content-addressed source snapshots and separately records each field's source snapshot. Public access failures, authentication barriers, rate limits, closed postings, and incomplete pages are retained with explicit statuses; the retriever never supplies credentials, cookies, CAPTCHA handling, or anti-bot bypass behavior.

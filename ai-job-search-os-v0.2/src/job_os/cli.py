@@ -10,6 +10,16 @@ from email.parser import BytesParser
 from email.utils import parseaddr
 from pathlib import Path
 
+from .candidate_evidence import (
+    DEFAULT_CANDIDATE_EVIDENCE_PATH,
+    CandidateEvidenceError,
+    build_candidate_evidence_index,
+    candidate_evidence_checksum,
+    claim_counts_by_status,
+    evidence_counts_by_category,
+    load_candidate_evidence,
+    validate_candidate_evidence,
+)
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
@@ -221,6 +231,72 @@ def not_yet(args):
     )
 
 
+def validate_candidate_evidence_command(args):
+    try:
+        artifact = load_candidate_evidence(args.candidate_evidence_path)
+        report = validate_candidate_evidence(artifact)
+        index = build_candidate_evidence_index(artifact) if report.valid else None
+        issues = report.issues
+        result = {
+            "valid": report.valid,
+            "schema_version": artifact.schema_version,
+            "evidence_counts": evidence_counts_by_category(artifact),
+            "claim_counts": claim_counts_by_status(artifact),
+            "provenance": {
+                "nodes": len(index.claim_by_id) if index else 0,
+                "edges": sum(
+                    len(values)
+                    for values in index.upstream_claim_ids_by_claim_id.values()
+                ) if index else 0,
+            },
+            "error_counts": {
+                "duplicate": sum(
+                    issue.code in {"duplicate_evidence_id", "duplicate_claim_id", "duplicate_upstream"}
+                    for issue in issues
+                ),
+                "reference": sum(
+                    issue.code in {"unknown_upstream", "non_verified_leaf", "self_reference"}
+                    for issue in issues
+                ),
+                "cycle": sum(issue.code == "provenance_cycle" for issue in issues),
+            },
+            "checksum": candidate_evidence_checksum(artifact),
+            "errors": [
+                {
+                    "category": issue.category,
+                    "code": issue.code,
+                    "path": issue.path,
+                    "message": issue.message,
+                }
+                for issue in issues
+            ],
+        }
+    except CandidateEvidenceError as exc:
+        issue = exc.issue
+        result = {
+            "valid": False,
+            "schema_version": None,
+            "evidence_counts": {},
+            "claim_counts": {},
+            "provenance": {"nodes": 0, "edges": 0},
+            "error_counts": {
+                "duplicate": 0,
+                "reference": 0,
+                "cycle": 0,
+            },
+            "checksum": None,
+            "errors": [
+                {
+                    "category": issue.category,
+                    "code": issue.code,
+                    "path": issue.path,
+                    "message": issue.message,
+                }
+            ],
+        }
+    print(json.dumps(result, sort_keys=True))
+
+
 def _add_input_options(parser: argparse.ArgumentParser) -> None:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input-json", help="connector-exported Gmail message JSON")
@@ -249,6 +325,13 @@ def main(argv=None):
     ingestion.add_argument("--db", default="job_os.sqlite")
     _add_input_options(ingestion)
     ingestion.set_defaults(func=ingest)
+
+    evidence = sub.add_parser("validate-candidate-evidence")
+    evidence.add_argument(
+        "--candidate-evidence-path",
+        default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH),
+    )
+    evidence.set_defaults(func=validate_candidate_evidence_command)
 
     for name in [
         "enrich",

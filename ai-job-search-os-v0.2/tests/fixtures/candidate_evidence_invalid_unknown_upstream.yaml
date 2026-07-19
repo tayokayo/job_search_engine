@@ -1,0 +1,7 @@
+claim_id: invalid_derived_01
+text: This deliberately invalid claim has no valid canonical source.
+status: derived
+derivation_type: synthesis
+derived_from_claim_ids:
+  - nonexistent_claim_01
+expected_error: unknown_upstream

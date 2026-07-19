@@ -40,3 +40,13 @@ PYTHONPATH=src python -m job_os.cli ingest --raw-mime alert-1.eml --raw-mime ale
 `--input-json` accepts a message list or an `emails`, `messages`, or `responses` wrapper. Messages may contain connector `body`/`body_text`/`body_html` fields or `raw_mime`/`raw_mime_base64url`. `--raw-mime` accepts RFC822 `.eml` files and may be repeated. Attachment MIME parts are skipped in every mode.
 
 The checkpoint uses Gmail read-only OAuth scope and contains no label, archive, send, delete, or attachment-read operation. Ingestion stores Gmail message IDs, canonicalizes LinkedIn job URLs to `https://linkedin.com/jobs/view/<id>`, and deduplicates by stable LinkedIn job ID before URL or normalized field fallbacks. Later milestone commands remain intentionally blocked.
+
+## Candidate evidence foundation
+
+The public, human-editable candidate evidence source is `config/candidate_evidence.yaml`. Validate its schema, provenance graph, policy constraints, and deterministic checksum without modifying the artifact or database:
+
+```bash
+PYTHONPATH=src python -m job_os.cli validate-candidate-evidence
+```
+
+Use `--candidate-evidence-path <path>` or the `CANDIDATE_EVIDENCE_PATH` environment variable to validate another artifact. Personal contact details are prohibited in the public artifact; a future private contact source belongs at the gitignored `config/candidate_private.yaml`.

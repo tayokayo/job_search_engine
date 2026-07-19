@@ -1,0 +1,473 @@
+schema_version: "1.1"
+artifact_type: candidate_evidence
+candidate_id: tayo_kayode
+candidate_name: Tayo Kayode
+canonical: true
+evidence_policy:
+  purpose: >-
+    Canonical source of candidate facts for opportunity scoring, resume tailoring,
+    outreach drafting, and interview preparation.
+  default_claim_status: unsupported
+  permitted_claim_statuses:
+    - verified
+    - derived
+    - unsupported
+  generation_rules:
+    - Use verified claims directly, without increasing their scope.
+    - Use derived claims only when clearly presented as synthesis or positioning.
+    - Never present unsupported requirements as candidate experience.
+    - Preserve dates, units, qualifiers, and metric boundaries exactly.
+    - Do not infer team size, budget, P&L ownership, reporting line, hiring authority, or technical depth.
+    - Do not convert collaboration or advisory work into sole ownership.
+    - If a required fact is absent, flag an evidence gap and request confirmation.
+  provenance_rules:
+    - Every candidate narrative claim intended for external use must have a unique claim_id.
+    - Every derived claim must declare derived_from_claim_ids containing exact upstream claim IDs.
+    - Parent evidence IDs and prose explanations are not sufficient provenance for a derived claim.
+    - Derived-claim provenance must form an acyclic graph terminating only in verified claims.
+    - A derived claim cannot broaden the scope, attribution, metrics, or certainty of its upstream claims.
+
+identity:
+  full_name:
+    value: Tayo Kayode
+    status: verified
+  location:
+    value: Tokyo, Japan
+    status: verified
+  linkedin:
+    value: linkedin.com/in/tayo-kayode-2237852b
+    status: verified
+  regional_experience:
+    value:
+      - Japan
+      - Singapore
+      - Thailand
+      - Southeast Asia
+      - East Asia
+      - China
+    status: verified
+
+privacy:
+  version_control_policy: >-
+    Personal email addresses and phone numbers are intentionally excluded from this
+    public artifact and must be injected only from a private, gitignored runtime source.
+  private_contact_path: config/candidate_private.yaml
+  commit_private_contact_file: false
+
+career_facts:
+  claims:
+    - claim_id: career_start_01
+      text: The canonical professional-experience record begins at Lazada Group on 1 July 2013.
+      status: verified
+    - claim_id: years_experience_01
+      text: Has 13 completed years of professional experience as of 18 July 2026.
+      status: derived
+      derivation_type: calculation
+      derived_from_claim_ids:
+        - career_start_01
+      calculation_rule: completed_years_between(2013-07-01, 2026-07-18)
+      as_of_date: "2026-07-18"
+
+positioning:
+  claims:
+    - claim_id: positioning_summary_01
+      text: >-
+        AI-native product and operations leader with experience across marketplace,
+        logistics, eCommerce, consumer product, and operational planning systems in
+        Southeast Asia and Japan.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - amazon_scope_01
+        - amazon_achievement_06
+        - castlery_scope_01
+        - tencent_scope_01
+        - acom_scope_01
+        - lazada_scope_01
+    - claim_id: positioning_domain_marketplace_01
+      text: Experience in marketplace platforms and seller systems.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - lazada_scope_01
+        - lazada_achievement_01
+        - lazada_achievement_03
+    - claim_id: positioning_domain_ecommerce_01
+      text: Experience in eCommerce and digital commerce.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - castlery_scope_01
+        - acom_scope_01
+    - claim_id: positioning_domain_logistics_01
+      text: Experience in logistics enablement and network planning.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - amazon_scope_01
+        - acom_scope_01
+    - claim_id: positioning_domain_planning_01
+      text: Experience in forecasting and sales and operations planning.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - amazon_scope_01
+        - amazon_achievement_03
+        - amazon_achievement_05
+    - claim_id: positioning_domain_consumer_01
+      text: Experience in consumer product and user research.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - tencent_scope_01
+        - tencent_achievement_02
+    - claim_id: positioning_domain_ux_01
+      text: Experience in UX and omnichannel product.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - castlery_scope_01
+        - castlery_achievement_04
+    - claim_id: positioning_domain_ai_01
+      text: Experience using AI-enabled workflows and operational analytics.
+      status: derived
+      derivation_type: synthesis
+      derived_from_claim_ids:
+        - amazon_achievement_06
+        - castlery_achievement_07
+        - project_news_02
+
+experience:
+  - evidence_id: amazon_japan_program_manager
+    company: Amazon
+    location: Tokyo, Japan
+    title: Program Manager, Amazon Logistics Japan
+    start_date: 2025-04
+    end_date: present
+    status: verified
+    scope_claims:
+      - claim_id: amazon_scope_01
+        text: >-
+          Single-threaded owner of planning across all miles and planning horizons,
+          spanning forecasting, network planning, stakeholder management, and sales
+          and operations planning.
+        status: verified
+      - claim_id: amazon_scope_02
+        text: >-
+          Aligns forecast assumptions with network capacity, operational constraints,
+          and execution readiness to identify planning gaps and inform cost, capacity,
+          and service decisions.
+        status: derived
+        derivation_type: paraphrase
+        derived_from_claim_ids:
+          - amazon_scope_01
+          - amazon_achievement_05
+    achievement_claims:
+      - claim_id: amazon_achievement_01
+        text: Reduced First Mile cost per package by over 70%.
+        status: verified
+      - claim_id: amazon_achievement_02
+        text: Supported 20x First Mile program growth to 10 million packages.
+        status: verified
+      - claim_id: amazon_achievement_03
+        text: Reduced First Mile forecast WAPE by more than 20 percentage points.
+        status: verified
+      - claim_id: amazon_achievement_04
+        text: Maintained Sort Center plan-versus-actual within plus or minus 10%.
+        status: verified
+      - claim_id: amazon_achievement_05
+        text: >-
+          Builds operating mechanisms connecting forecast accuracy, network planning,
+          cost control, and stakeholder alignment.
+        status: verified
+      - claim_id: amazon_achievement_06
+        text: >-
+          Uses Codex and Kiro to accelerate analysis, documentation, planning
+          processes, and interpretation of operational signals.
+        status: verified
+
+  - evidence_id: castlery_senior_manager
+    company: Castlery
+    location: Singapore
+    title: Senior Manager, Product Management & UX
+    start_date: 2021-11
+    end_date: 2025-02
+    status: verified
+    scope_claims:
+      - claim_id: castlery_scope_01
+        text: >-
+          Led digital product, UX, omnichannel, and generative AI initiatives across
+          Castlery's eCommerce and retail business.
+        status: verified
+      - claim_id: castlery_scope_02
+        text: >-
+          Established and led the Digital Product Team across eCommerce, Product
+          Management, and UX Design.
+        status: verified
+    achievement_claims:
+      - claim_id: castlery_achievement_01
+        text: Contributed to 30% year-on-year revenue growth.
+        status: verified
+      - claim_id: castlery_achievement_02
+        text: Increased eCommerce basket size by 12%.
+        status: verified
+      - claim_id: castlery_achievement_03
+        text: Reduced eCommerce bounce rate to 43%.
+        status: verified
+      - claim_id: castlery_achievement_04
+        text: Deployed omnichannel solutions accounting for 16% of country revenue.
+        status: verified
+      - claim_id: castlery_achievement_05
+        text: >-
+          Reduced product-image generation lead time from 3–20 days to 1–2 days
+          through a cross-functional Stable Diffusion and Photoshop workflow.
+        status: verified
+      - claim_id: castlery_achievement_06
+        text: >-
+          Saved more than 10,000 working hours by launching digital design tools and
+          a design system from scratch.
+        status: verified
+      - claim_id: castlery_achievement_07
+        text: >-
+          Introduced a Voice of Customer initiative using keyword and sentiment
+          analysis to inform product strategy.
+        status: verified
+      - claim_id: castlery_achievement_08
+        text: >-
+          Advised CRM and Campaign teams on initiatives tied to add-to-cart, account
+          sign-up, and revenue performance.
+        status: verified
+
+  - evidence_id: tencent_joox_senior_product_manager
+    company: Tencent
+    business_or_product: JOOX
+    location: Bangkok, Thailand
+    title: Senior Product Manager
+    start_date: 2019-05
+    end_date: 2021-11
+    status: verified
+    scope_claims:
+      - claim_id: tencent_scope_01
+        text: >-
+          Managed consumer-product delivery, user research, and cross-market
+          collaboration for JOOX across Southeast Asia and East Asia.
+        status: verified
+    achievement_claims:
+      - claim_id: tencent_achievement_01
+        text: >-
+          Managed product feature delivery and cross-platform expansion for JOOX,
+          serving an audience equivalent to 10% of Southeast Asia's population.
+        status: verified
+      - claim_id: tencent_achievement_02
+        text: >-
+          Established user-research practices across Southeast Asia and East Asia and
+          translated customer insight into product decisions.
+        status: verified
+      - claim_id: tencent_achievement_03
+        text: >-
+          Led cross-functional collaboration among business, engineering, data
+          science, media, and product teams in China, Thailand, Hong Kong, and Indonesia.
+        status: verified
+
+  - evidence_id: acom_commerce_regional_general_manager
+    company: aCommerce
+    location: Bangkok, Thailand
+    title: Regional General Manager
+    start_date: 2016-04
+    end_date: 2019-03
+    status: verified
+    scope_claims:
+      - claim_id: acom_scope_01
+        text: >-
+          Led regional eCommerce logistics initiatives across Southeast Asia,
+          connecting brands, marketplaces, logistics providers, and operating teams.
+        status: verified
+    achievement_claims:
+      - claim_id: acom_achievement_01
+        text: >-
+          Launched Smartship, a 4PL eCommerce solution, across five Southeast Asian
+          markets.
+        status: verified
+      - claim_id: acom_achievement_02
+        text: >-
+          Connected more than 20 logistics providers supporting hundreds of brands.
+        status: verified
+      - claim_id: acom_achievement_03
+        text: >-
+          Automated cash-on-delivery reconciliation across Thailand, the Philippines,
+          and Indonesia, in markets where cash represented 25–40% of eCommerce orders.
+        status: verified
+      - claim_id: acom_achievement_04
+        text: Expanded channel capabilities by launching social commerce through Facebook.
+        status: verified
+
+  - evidence_id: lazada_regional_program_manager
+    company: Lazada Group
+    location: Bangkok, Thailand
+    title: Regional Program Manager
+    start_date: "2013-07-01"
+    end_date: 2016-04
+    status: verified
+    scope_claims:
+      - claim_id: lazada_scope_01
+        text: >-
+          Supported regional marketplace platform operations, seller systems,
+          payments, and integration capabilities across Southeast Asia.
+        status: verified
+    achievement_claims:
+      - claim_id: lazada_achievement_01
+        text: Rolled out Seller Center in Thailand and managed regional marketplace platform operations.
+        status: verified
+      - claim_id: lazada_achievement_02
+        text: >-
+          Automated seller payments, reconciliation, fees, and penalties supporting
+          more than US$30 million in weekly payments.
+        status: verified
+      - claim_id: lazada_achievement_03
+        text: >-
+          Built the Seller Center API framework supporting regional and global brand
+          partnerships and integrations with eCommerce enablers across Southeast Asia
+          and Europe.
+        status: verified
+      - claim_id: lazada_achievement_04
+        text: >-
+          Integrated Payoneer to automate US$3–5 million in weekly cross-border vendor
+          payments.
+        status: verified
+      - claim_id: lazada_achievement_05
+        text: Integrated SAP for standardized reporting and tax compliance.
+        status: verified
+
+projects:
+  - evidence_id: ai_news_aggregator
+    name: AI-Powered News Aggregator
+    role: Builder
+    project_type: Personal project
+    start_date: 2024-01
+    end_date: present
+    status: verified
+    claims:
+      - claim_id: project_news_01
+        text: Built a Python pipeline to scrape, categorize, and store news content in MongoDB.
+        status: verified
+      - claim_id: project_news_02
+        text: >-
+          Applied LLMs and NLP techniques for troubleshooting, keyword analysis,
+          sentiment analysis, and time-based summarization workflows.
+        status: verified
+      - claim_id: project_news_03
+        text: >-
+          Uses the project as a testbed for AI-enabled research, operating workflows,
+          and agentic analysis.
+        status: verified
+
+education:
+  - evidence_id: education_essex
+    institution: University of Essex
+    country: United Kingdom
+    qualification: BA (Hons) Economics
+    focus: Development Economics
+    minor: Psychology
+    status: verified
+
+languages:
+  - language: English
+    proficiency: Native
+    status: verified
+  - language: Thai
+    proficiency: Conversational
+    status: verified
+  - language: Mandarin
+    proficiency: Functional
+    status: verified
+  - language: Japanese
+    proficiency: Functional
+    status: verified
+
+skills:
+  coding_assistants_and_agents:
+    status: verified
+    values:
+      - Codex
+      - Kiro
+  data_and_analytics:
+    status: verified
+    values:
+      - Python
+      - SQL
+      - Power BI
+      - Google Analytics
+      - NLP
+  ai_and_workflows:
+    status: verified
+    values:
+      - generative AI workflows
+      - sentiment analysis
+      - keyword analysis
+      - LLM-assisted research and documentation
+  product_and_design:
+    status: verified
+    values:
+      - Figma
+      - UX research
+      - design systems
+      - product discovery
+      - experimentation
+      - customer journey design
+
+explicit_evidence_gaps:
+  - claim_id: gap_paid_acquisition_01
+    text: Direct ownership of paid acquisition, SEO, or AEO is not established.
+    status: unsupported
+  - claim_id: gap_pnl_ownership_01
+    text: P&L ownership is not established.
+    status: unsupported
+  - claim_id: gap_budget_01
+    text: Budget size or direct budget ownership is not established.
+    status: unsupported
+  - claim_id: gap_direct_reports_01
+    text: Direct-report count and organization size are not established.
+    status: unsupported
+  - claim_id: gap_people_authority_01
+    text: Hiring and performance-management authority are not established.
+    status: unsupported
+  - claim_id: gap_board_reporting_01
+    text: Board-reporting experience is not established.
+    status: unsupported
+  - claim_id: gap_japanese_business_01
+    text: Native or business-level Japanese proficiency is not established.
+    status: unsupported
+  - claim_id: gap_mandarin_business_01
+    text: Native or business-level Mandarin Chinese proficiency is not established.
+    status: unsupported
+  - claim_id: gap_ml_engineering_leadership_01
+    text: Machine-learning engineering leadership is not established.
+    status: unsupported
+  - claim_id: gap_software_engineering_management_01
+    text: Software-engineering management is not established.
+    status: unsupported
+  - claim_id: gap_compensation_01
+    text: Compensation expectations are not established.
+    status: unsupported
+  - claim_id: gap_work_authorization_01
+    text: Work authorization or sponsorship status outside Japan is not established.
+    status: unsupported
+
+prohibited_inferences:
+  - Do not describe functional Japanese or Mandarin as business-level fluency.
+  - Do not claim paid-acquisition, SEO, AEO, or growth-marketing ownership.
+  - Do not claim P&L, budget, board, or people-management scope without new evidence.
+  - Do not claim machine-learning or software-engineering leadership.
+  - Do not attribute company-wide results solely to the candidate when the source says contributed to, advised, supported, or collaborated.
+  - Do not round, combine, annualize, or extrapolate metrics.
+
+maintenance:
+  update_method: Human-reviewed amendment only
+  required_for_new_claim:
+    - source description
+    - exact claim text
+    - claim status
+    - reviewer confirmation
+  freshness_notes:
+    - Recalculate years of experience and update its as_of_date before external use.
+    - Confirm current-role facts and current project status periodically.

@@ -1,0 +1,13 @@
+schema_version: "1"
+
+# Copy this file to an ignored private location for operational use. A company hint
+# is trusted only when a human reviewer explicitly changes reviewed to true.
+companies:
+  Example Company:
+    reviewed: false
+    official_domains:
+      - careers.example.com
+    ats_domains:
+      - jobs.example-ats.com
+    candidate_urls:
+      - https://careers.example.com/jobs/example-role

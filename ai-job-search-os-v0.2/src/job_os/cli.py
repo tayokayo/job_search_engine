@@ -4,6 +4,7 @@ import argparse
 import base64
 import json
 import re
+import sqlite3
 from collections import Counter
 from email import policy
 from email.parser import BytesParser
@@ -21,9 +22,16 @@ from .candidate_evidence import (
     validate_candidate_evidence,
 )
 from .enrichment import FixtureRetriever, PublicHttpRetriever, enrich_opportunities
+from .enrichment_inspection import show_enrichment
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
+from .source_resolver import (
+    CapturedSearchProvider,
+    EmptySearchProvider,
+    OfficialSourceResolver,
+    load_source_hints,
+)
 
 DISCOVERY_QUERY = (
     "newer_than:30d from:linkedin.com -has:attachment -in:spam -in:trash"
@@ -305,6 +313,16 @@ def enrich_command(args):
         if args.responses_json
         else PublicHttpRetriever(timeout_seconds=args.timeout)
     )
+    search_provider = (
+        CapturedSearchProvider.from_json(args.resolver_results_json)
+        if args.resolver_results_json
+        else EmptySearchProvider()
+    )
+    resolver = OfficialSourceResolver(
+        retriever,
+        search_provider=search_provider,
+        hints=load_source_hints(args.source_hints),
+    )
     try:
         result = enrich_opportunities(
             conn,
@@ -312,12 +330,28 @@ def enrich_command(args):
             job_ids=args.job_id,
             max_results=args.max_results,
             refresh=args.refresh,
+            resolver=resolver,
         )
     finally:
         conn.close()
         close = getattr(retriever, "close", None)
         if close:
             close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_enrichment_command(args):
+    database = Path(args.db).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        result = show_enrichment(conn, args.job_id)
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
@@ -366,8 +400,21 @@ def main(argv=None):
         "--responses-json",
         help="sanitized public-response fixture for deterministic offline verification",
     )
+    enrichment.add_argument(
+        "--resolver-results-json",
+        help="URL-only captured public-search results; snippets are never ingested",
+    )
+    enrichment.add_argument(
+        "--source-hints",
+        help="human-reviewed company-domain, ATS-domain, and source-URL hints",
+    )
     enrichment.add_argument("--timeout", type=float, default=15.0)
     enrichment.set_defaults(func=enrich_command)
+
+    inspection = sub.add_parser("show-enrichment")
+    inspection.add_argument("--job-id", type=int, required=True)
+    inspection.add_argument("--db", default="job_os.sqlite")
+    inspection.set_defaults(func=show_enrichment_command)
 
     for name in [
         "evaluate",

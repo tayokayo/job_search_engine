@@ -94,6 +94,40 @@ CREATE TABLE IF NOT EXISTS job_enrichments (
   failure_reason TEXT,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS job_source_candidates (
+  id INTEGER PRIMARY KEY,
+  job_id INTEGER NOT NULL REFERENCES jobs(id),
+  candidate_url TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  source_type TEXT NOT NULL CHECK(source_type IN ('official_company', 'official_ats', 'other')),
+  discovery_method TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  search_query TEXT,
+  provider_rank INTEGER,
+  discovered_at TEXT NOT NULL,
+  evaluated_at TEXT NOT NULL,
+  decision TEXT NOT NULL CHECK(decision IN ('accepted', 'rejected', 'pending')),
+  decision_reason TEXT NOT NULL,
+  confidence_reasons_json TEXT NOT NULL DEFAULT '[]',
+  retrieval_status TEXT,
+  http_status INTEGER,
+  content_checksum TEXT,
+  UNIQUE(job_id, candidate_url, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_job_source_candidates_job_id
+ON job_source_candidates(job_id);
+CREATE INDEX IF NOT EXISTS idx_job_source_candidates_decision
+ON job_source_candidates(decision, decision_reason);
+
+CREATE TABLE IF NOT EXISTS job_eligibility_decisions (
+  job_id INTEGER PRIMARY KEY REFERENCES jobs(id),
+  decision TEXT NOT NULL CHECK(decision IN ('eligible', 'conditionally_eligible', 'manual_review', 'ineligible')),
+  reason TEXT NOT NULL,
+  verification_status TEXT NOT NULL,
+  complete_description INTEGER NOT NULL,
+  decided_at TEXT NOT NULL
+);
 """
 
 

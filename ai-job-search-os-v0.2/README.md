@@ -58,8 +58,22 @@ Enrich opportunities already stored in SQLite using unauthenticated public pages
 ```bash
 PYTHONPATH=src python3 -m job_os.cli enrich --db job_os.sqlite --max-results 25
 PYTHONPATH=src python3 -m job_os.cli enrich --db job_os.sqlite --refresh
+PYTHONPATH=src python3 -m job_os.cli show-enrichment --job-id 1 --db job_os.sqlite
 ```
 
 Use `--job-id <database-id>` to limit the run; repeat the option for multiple jobs. `--refresh` rechecks previously enriched records. Tests and offline audits can supply sanitized captured responses with `--responses-json <path>`.
 
 Enrichment follows official-company, official ATS, public LinkedIn, then alert-email precedence. It stores immutable content-addressed source snapshots and separately records each field's source snapshot. Public access failures, authentication barriers, rate limits, closed postings, and incomplete pages are retained with explicit statuses; the retriever never supplies credentials, cookies, CAPTCHA handling, or anti-bot bypass behavior.
+
+The optional official-source resolver accepts URL-only captured search results and human-reviewed domain hints. It never treats search-result snippets as evidence:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli enrich \
+  --db job_os.sqlite \
+  --resolver-results-json data/private/official_source_search_results.json \
+  --source-hints data/private/official_source_hints.yaml
+```
+
+Start reviewed hints from `config/official_source_hints.example.yaml`; keep operational hints and captured results under the gitignored `data/private/` directory. Resolver candidates must match company, title, and location before acceptance. Accepted and rejected candidates are recorded with reasons, while unsafe schemes, private-network targets, untrusted redirects, and oversized responses are rejected.
+
+`show-enrichment` opens the database read-only and displays selected and alternative values, provenance, source precedence, retrieval state, checksums, resolver decisions, and failure reasons. It does not display raw email content, OAuth data, or candidate-private information. The stored eligibility decision is deliberately non-numeric: verified official/ATS records are eligible, sufficiently complete LinkedIn-only records are conditionally eligible, partial/conflicting records require manual review, and unavailable/closed records are ineligible. This checkpoint does not implement opportunity scoring.

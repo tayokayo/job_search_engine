@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import re
+import socket
 import sqlite3
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
@@ -76,7 +78,6 @@ CLOSED_PATTERNS = (
     "applications are closed",
 )
 ACCESS_RESTRICTION_PATTERNS = (
-    "captcha",
     "verify you are human",
     "unusual traffic",
     "access denied",
@@ -142,6 +143,62 @@ def classify_source_url(url: str) -> str:
     return "official_company"
 
 
+class UnsafePublicUrl(ValueError):
+    pass
+
+
+def validate_public_url(url: str, *, resolve_dns: bool = False) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise UnsafePublicUrl("unsupported_url_scheme")
+    if not parsed.hostname or parsed.username or parsed.password:
+        raise UnsafePublicUrl("invalid_public_url")
+    hostname = parsed.hostname.lower().rstrip(".")
+    if (
+        hostname == "localhost"
+        or hostname.endswith(".localhost")
+        or hostname.endswith(".local")
+        or hostname.endswith(".internal")
+    ):
+        raise UnsafePublicUrl("private_network_target")
+
+    def reject_address(address: str) -> None:
+        try:
+            value = ipaddress.ip_address(address)
+        except ValueError:
+            return
+        if not value.is_global:
+            raise UnsafePublicUrl("private_network_target")
+
+    reject_address(hostname)
+    if resolve_dns:
+        try:
+            addresses = {
+                item[4][0]
+                for item in socket.getaddrinfo(
+                    hostname,
+                    parsed.port or (443 if parsed.scheme == "https" else 80),
+                    type=socket.SOCK_STREAM,
+                )
+            }
+        except OSError as exc:
+            raise UnsafePublicUrl("dns_resolution_failed") from exc
+        for address in addresses:
+            reject_address(address)
+    return _source_url(url)
+
+
+def _trusted_redirect(source_url: str, target_url: str) -> bool:
+    source_host = _host(source_url)
+    target_host = _host(target_url)
+    same_domain = (
+        source_host == target_host
+        or source_host.endswith("." + target_host)
+        or target_host.endswith("." + source_host)
+    )
+    return same_domain
+
+
 @dataclass(frozen=True)
 class RetrievalResult:
     requested_url: str
@@ -160,9 +217,17 @@ class Retriever(Protocol):
 class PublicHttpRetriever:
     """Unauthenticated public HTTP retriever with no cookies or bypass behavior."""
 
-    def __init__(self, timeout_seconds: float = 15.0):
+    def __init__(
+        self,
+        timeout_seconds: float = 15.0,
+        *,
+        max_response_bytes: int = 2_000_000,
+        max_redirects: int = 3,
+    ):
+        self.max_response_bytes = max_response_bytes
+        self.max_redirects = max_redirects
         self._client = httpx.Client(
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=timeout_seconds,
             headers={
                 "User-Agent": "JobSearchOS-PublicVerification/0.2 (+public unauthenticated retrieval)",
@@ -175,20 +240,58 @@ class PublicHttpRetriever:
 
     def retrieve(self, url: str) -> RetrievalResult:
         checked_at = utc_now()
+        current_url = url
         try:
-            response = self._client.get(_source_url(url))
-        except (httpx.HTTPError, ValueError) as exc:
+            for redirect_count in range(self.max_redirects + 1):
+                current_url = validate_public_url(current_url, resolve_dns=True)
+                with self._client.stream("GET", current_url) as response:
+                    if response.is_redirect:
+                        location = response.headers.get("location")
+                        if not location:
+                            raise UnsafePublicUrl("redirect_missing_location")
+                        target = validate_public_url(
+                            urljoin(current_url, location), resolve_dns=True
+                        )
+                        if not _trusted_redirect(current_url, target):
+                            raise UnsafePublicUrl("untrusted_redirect")
+                        if redirect_count >= self.max_redirects:
+                            raise UnsafePublicUrl("too_many_redirects")
+                        current_url = target
+                        continue
+                    content_length = response.headers.get("content-length")
+                    if content_length and int(content_length) > self.max_response_bytes:
+                        raise UnsafePublicUrl("response_too_large")
+                    chunks: list[bytes] = []
+                    size = 0
+                    for chunk in response.iter_bytes():
+                        size += len(chunk)
+                        if size > self.max_response_bytes:
+                            raise UnsafePublicUrl("response_too_large")
+                        chunks.append(chunk)
+                    body_bytes = b"".join(chunks)
+                    status_code = response.status_code
+                    headers = dict(response.headers)
+                    final_url = str(response.url)
+                    encoding = response.encoding or "utf-8"
+                    body_text = body_bytes.decode(encoding, errors="replace")
+                    break
+            else:
+                raise UnsafePublicUrl("too_many_redirects")
+        except (httpx.HTTPError, UnsafePublicUrl, ValueError) as exc:
             return RetrievalResult(
                 requested_url=url,
-                final_url=url,
+                final_url=current_url,
                 retrieved_at=checked_at,
                 status_code=None,
                 body="",
-                retrieval_status="network_error",
-                failure_reason=type(exc).__name__,
+                retrieval_status=(
+                    "security_rejected"
+                    if isinstance(exc, UnsafePublicUrl)
+                    else "network_error"
+                ),
+                failure_reason=str(exc) or type(exc).__name__,
             )
-        final_url = str(response.url)
-        content_type = response.headers.get("content-type", "").lower()
+        content_type = headers.get("content-type", "").lower()
         if content_type and not any(
             allowed in content_type
             for allowed in (
@@ -202,26 +305,26 @@ class PublicHttpRetriever:
                 requested_url=url,
                 final_url=final_url,
                 retrieved_at=checked_at,
-                status_code=response.status_code,
+                status_code=status_code,
                 body="",
                 retrieval_status="unsupported_content_type",
                 failure_reason=(
                     "unsupported content type: " + content_type.split(";", 1)[0]
                 ),
             )
-        body = response.text if response.status_code < 500 else ""
-        lower = body.lower()
-        if response.status_code == 410 or any(term in lower for term in CLOSED_PATTERNS):
+        body = body_text if status_code < 500 else ""
+        visible_lower = sanitized_html_to_text(body).lower() if body else ""
+        if status_code == 410 or any(term in visible_lower for term in CLOSED_PATTERNS):
             status, reason = "closed", "posting explicitly reports that it is closed"
-        elif response.status_code in {401, 403}:
-            status, reason = "access_restricted", f"HTTP {response.status_code}"
-        elif response.status_code == 429:
+        elif status_code in {401, 403}:
+            status, reason = "access_restricted", f"HTTP {status_code}"
+        elif status_code == 429:
             status, reason = "rate_limited", "HTTP 429"
-        elif response.status_code == 404:
+        elif status_code == 404:
             status, reason = "unavailable", "HTTP 404"
-        elif response.status_code >= 400:
-            status, reason = "http_error", f"HTTP {response.status_code}"
-        elif any(term in lower for term in ACCESS_RESTRICTION_PATTERNS):
+        elif status_code >= 400:
+            status, reason = "http_error", f"HTTP {status_code}"
+        elif any(term in visible_lower for term in ACCESS_RESTRICTION_PATTERNS):
             status, reason = "access_restricted", "public page presented an access-control challenge"
         else:
             status, reason = "success", None
@@ -229,7 +332,7 @@ class PublicHttpRetriever:
             requested_url=url,
             final_url=final_url,
             retrieved_at=checked_at,
-            status_code=response.status_code,
+            status_code=status_code,
             body=body,
             retrieval_status=status,
             failure_reason=reason,
@@ -470,7 +573,12 @@ def extract_posting(html: str, source_url: str) -> ExtractedPosting:
             if not is_linkedin_url(linked) and linked not in posting_links:
                 posting_links = posting_links + (linked,)
     if not description:
-        main = soup.find("main") or soup.find("article")
+        main = (
+            soup.select_one("div.description__text")
+            if is_linkedin_url(source_url)
+            else None
+        )
+        main = main or soup.find("main") or soup.find("article")
         description = sanitized_html_to_text(str(main)) if main else page_text
     if description:
         fields["job_description"] = description
@@ -526,6 +634,19 @@ def _normalized_identity(value: Any) -> str:
     return _stable_json(value).lower()
 
 
+def _identity_values_conflict(field_name: str, values: set[str]) -> bool:
+    if len(values) <= 1:
+        return False
+    if field_name not in {"company", "location"}:
+        return True
+    ordered = sorted(values, key=len)
+    return any(
+        shorter not in longer
+        for index, shorter in enumerate(ordered)
+        for longer in ordered[index + 1 :]
+    )
+
+
 def _organization_matches(expected: str, actual: Any) -> bool:
     if not actual:
         return False
@@ -534,6 +655,30 @@ def _organization_matches(expected: str, actual: Any) -> bool:
     return expected_norm == actual_norm or (
         len(expected_norm) >= 5
         and (expected_norm in actual_norm or actual_norm in expected_norm)
+    )
+
+
+def _posting_identity_matches(job: sqlite3.Row, fields: Mapping[str, Any]) -> bool:
+    if not _organization_matches(job["company"], fields.get("company")):
+        return False
+    expected_title = _normalized_identity(job["title"])
+    actual_title = _normalized_identity(fields.get("job_title", ""))
+    if not expected_title or not actual_title or not (
+        expected_title == actual_title
+        or expected_title in actual_title
+        or actual_title in expected_title
+    ):
+        return False
+    expected_location = _normalized_identity(job["location"])
+    actual_location = _normalized_identity(fields.get("location", ""))
+    return bool(
+        expected_location
+        and actual_location
+        and (
+            expected_location == actual_location
+            or expected_location in actual_location
+            or actual_location in expected_location
+        )
     )
 
 
@@ -561,7 +706,7 @@ def _persist_snapshot(
 ) -> int:
     final_url = _source_url(result.final_url or source_url)
     fields = dict(extracted.fields) if extracted else {}
-    content_text = extracted.sanitized_text if extracted else ""
+    content_text = str(fields.get("job_description") or "")
     content_basis = _stable_json(
         {
             "text": _normalized_space(content_text),
@@ -709,9 +854,7 @@ def _retrieve_source(
         )
     effective_type = source_type
     if source_type in {"official_company", "official_ats"}:
-        if not extracted or not _organization_matches(
-            job["company"], extracted.fields.get("company")
-        ):
+        if not extracted or not _posting_identity_matches(job, extracted.fields):
             effective_type = "other"
     _persist_snapshot(conn, job["id"], url, effective_type, result, extracted)
     return result, extracted, effective_type
@@ -760,7 +903,7 @@ def _aggregate_job(
             normalized_values = {
                 _normalized_identity(json.loads(row["value_json"])) for row in rows
             }
-            if len(normalized_values) > 1:
+            if _identity_values_conflict(field_name, normalized_values):
                 conflicts.append(field_name)
     conn.execute("DELETE FROM job_current_fields WHERE job_id = ?", (job["id"],))
     for field_name, row in selected.items():
@@ -907,6 +1050,7 @@ def enrich_job(
     job: sqlite3.Row,
     retriever: Retriever,
     attempted_at: datetime | None = None,
+    resolver: Any | None = None,
 ) -> dict[str, Any]:
     attempted_at = attempted_at or utc_now()
     _persist_alert_snapshot(conn, job)
@@ -949,9 +1093,53 @@ def enrich_job(
                 careers_links.update(
                     link for link in extracted.careers_links if not is_linkedin_url(link)
                 )
+    if resolver is not None:
+        careers_links.update(resolver.resolve(conn, job))
     result = _aggregate_job(conn, job, attempted_at, careers_links)
+    decision, reason = eligibility_for(
+        result["verification_status"], result["complete_description"]
+    )
+    conn.execute(
+        """
+        INSERT INTO job_eligibility_decisions(
+          job_id, decision, reason, verification_status,
+          complete_description, decided_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(job_id) DO UPDATE SET
+          decision = excluded.decision,
+          reason = excluded.reason,
+          verification_status = excluded.verification_status,
+          complete_description = excluded.complete_description,
+          decided_at = excluded.decided_at
+        """,
+        (
+            job["id"],
+            decision,
+            reason,
+            result["verification_status"],
+            int(result["complete_description"]),
+            _iso(attempted_at),
+        ),
+    )
+    result["eligibility"] = decision
+    result["eligibility_reason"] = reason
     conn.commit()
     return result
+
+
+def eligibility_for(
+    verification_status: str, complete_description: bool
+) -> tuple[str, str]:
+    if verification_status in {"verified_official", "verified_ats"}:
+        return "eligible", "verified official source"
+    if verification_status == "linkedin_only" and complete_description:
+        return (
+            "conditionally_eligible",
+            "complete public LinkedIn description without an official match",
+        )
+    if verification_status in {"partial", "conflicting"}:
+        return "manual_review", f"verification status is {verification_status}"
+    return "ineligible", f"verification status is {verification_status}"
 
 
 def _selected_jobs(
@@ -1018,7 +1206,10 @@ def enrich_opportunities(
     job_ids: list[int] | None = None,
     max_results: int = 25,
     refresh: bool = False,
+    resolver: Any | None = None,
 ) -> dict[str, Any]:
     jobs = _selected_jobs(conn, job_ids, max_results, refresh)
-    results = [enrich_job(conn, job, retriever) for job in jobs]
+    results = [
+        enrich_job(conn, job, retriever, resolver=resolver) for job in jobs
+    ]
     return enrichment_summary(conn, results, [job["id"] for job in jobs])

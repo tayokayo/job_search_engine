@@ -9,13 +9,13 @@ def fake_message():
     return {
         "id": "gmail-1",
         "payload": {"headers": [{"name": "Date", "value": "Tue, 14 Jul 2026 10:00:00 +0000"}]},
-        "html": '<a href="https://www.linkedin.com/jobs/view/123456/?utm_source=email&trackingId=x">View job</a>',
-        "text": "Senior Product Manager\nGrab\nSingapore\nhttps://www.linkedin.com/jobs/view/123456/?utm_source=email&trackingId=x",
+        "html": '<a href="https://www.linkedin.com/jobs/view/123456/?utm_source=email&trackingId=x"><span>Senior Product Manager</span><span>Grab · Singapore</span></a>',
+        "text": "",
     }
 
 
 def test_url_normalization_removes_safe_tracking():
-    assert normalize_url("https://www.linkedin.com/jobs/view/123/?utm_source=email&currentJobId=123&trackingId=x#frag") == "https://linkedin.com/jobs/view/123?currentJobId=123"
+    assert normalize_url("https://www.linkedin.com/jobs/view/123/?utm_source=email&currentJobId=123&trackingId=x#frag") == "https://linkedin.com/jobs/view/123"
 
 
 def test_extract_job_id():

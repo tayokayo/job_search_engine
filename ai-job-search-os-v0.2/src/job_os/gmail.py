@@ -4,17 +4,34 @@ import base64
 import os
 from pathlib import Path
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+
+def credential_paths(
+    credentials_path: str | None = None, token_path: str | None = None
+) -> tuple[str, str]:
+    credentials_path = (
+        credentials_path
+        or os.getenv("GMAIL_CREDENTIALS_PATH")
+        or os.getenv("GMAIL_CREDENTIALS")
+        or "credentials.json"
+    )
+    token_path = (
+        token_path
+        or os.getenv("GMAIL_TOKEN_PATH")
+        or os.getenv("GMAIL_TOKEN")
+        or "token.json"
+    )
+    return credentials_path, token_path
 
 
 def gmail_service(credentials_path: str | None = None, token_path: str | None = None):
-    credentials_path = credentials_path or os.getenv("GMAIL_CREDENTIALS", "credentials.json")
-    token_path = token_path or os.getenv("GMAIL_TOKEN", "token.json")
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+
+    credentials_path, token_path = credential_paths(credentials_path, token_path)
     creds = None
     if Path(token_path).exists():
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
@@ -39,7 +56,10 @@ def body_parts(payload: dict) -> tuple[str, str]:
         part = stack.pop()
         stack.extend(part.get("parts", []) or [])
         mime = part.get("mimeType")
-        data = part.get("body", {}).get("data")
+        body = part.get("body", {})
+        if body.get("attachmentId") or part.get("filename"):
+            continue
+        data = body.get("data")
         if not data:
             continue
         if mime == "text/plain":

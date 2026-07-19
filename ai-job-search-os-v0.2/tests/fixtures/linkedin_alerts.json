@@ -1,0 +1,46 @@
+[
+  {
+    "id": "fixture-bangkok",
+    "from_": "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>",
+    "subject": "“Strategy & Operations”: Johnson & Johnson MedTech - Sr. Manager, SEA NA posted on 7/16/26",
+    "email_ts": "2026-07-18T09:57:01+00:00",
+    "body_html": "<html><body><a href=\"https://www.linkedin.com/feed/\">LinkedIn</a><a href=\"https://www.linkedin.com/comm/jobs/search-results/?keywords=Strategy\">Your job alert</a><a href=\"https://www.linkedin.com/comm/jobs/view/4441439743/?trackingId=sample-a\"><img alt=\"Johnson & Johnson MedTech\"></a><a href=\"https://www.linkedin.com/comm/jobs/view/4441439743/?trackingId=sample-b\"><span>Sr. Manager, SEA NA</span><span>Johnson & Johnson MedTech · Bangkok (Hybrid)</span><span>Actively recruiting</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4418598063/?trk=email\"><span>People Operations Business Partner</span><span>Grab · Bangkok (On-site)</span><span>12 connections</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4440633651/?refId=sample\"><span>Consultant, Thailand</span><span>Boston Consulting Group (BCG) · Bangkok</span><span>3 connections</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4382942869/?utm_source=email\"><span>Operations Manufacturing Lean Consultant - Operations Excellence Program</span><span>McKinsey & Company · Bangkok</span><span>6 connections</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4438483778/?trkEmail=sample\"><span>Teaching Operations Manager</span><span>British Council · Bangkok (Hybrid)</span><span>39 company alumni</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4382237942/?eid=sample\"><span>Business & Performance Analytics - Merchant,Shopeefood</span><span>Shopee · Bangkok (On-site)</span><span>Actively recruiting</span><span>Fast growing</span></a><a href=\"https://www.linkedin.com/comm/jobs/alerts\">Manage alerts</a><a href=\"https://www.linkedin.com/settings/\">Settings</a><a href=\"https://www.linkedin.com/job-alert-email-unsubscribe\">Unsubscribe</a></body></html>",
+    "expected_jobs": [
+      ["4441439743", "Sr. Manager, SEA NA", "Johnson & Johnson MedTech", "Bangkok"],
+      ["4418598063", "People Operations Business Partner", "Grab", "Bangkok"],
+      ["4440633651", "Consultant, Thailand", "Boston Consulting Group (BCG)", "Bangkok"],
+      ["4382942869", "Operations Manufacturing Lean Consultant - Operations Excellence Program", "McKinsey & Company", "Bangkok"],
+      ["4438483778", "Teaching Operations Manager", "British Council", "Bangkok"],
+      ["4382237942", "Business & Performance Analytics - Merchant,Shopeefood", "Shopee", "Bangkok"]
+    ]
+  },
+  {
+    "id": "fixture-singapore",
+    "from_": "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>",
+    "subject": "Head of Product at Selby Jennings",
+    "email_ts": "2026-07-18T05:57:02+00:00",
+    "body_html": "<html><body><a href=\"https://www.linkedin.com/messaging/\">Messaging</a><a href=\"https://www.linkedin.com/comm/jobs/search/?keywords=Head%20of%20Product\">Your job alert</a><a href=\"https://www.linkedin.com/comm/jobs/view/4325834703/?trackingId=sample\"><span>Head of Product</span><span>Selby Jennings · Singapore (On-site)</span><span>Actively recruiting</span><span>Easy Apply</span><span>Fast growing</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4418114331/?trackingId=sample\"><span>Bureau Product Head</span><span>ADVANCE.AI · Singapore</span><span>Actively recruiting</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4438487998/?trackingId=sample\"><span>Lead/Principal Product Manager</span><span>Kerry Consulting · Singapore River</span><span>1 connection</span><span>Easy Apply</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4440230946/?trackingId=sample\"><span>Vice President - Digital Customer Platform</span><span>Great Eastern · Singapore (Hybrid)</span><span>Actively recruiting</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4440693506/?trackingId=sample\"><span>Chief Product Owner, Clearing & Margining</span><span>Standard Chartered Singapore · Singapore (On-site)</span><span>1 company alum</span><span>Fast growing</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4360808177/?trackingId=sample\"><span>Senior VP, Financial Supply Chain Management, Group Product Manager</span><span>UOB · Singapore (On-site)</span><span>5 connections</span></a><a href=\"https://www.linkedin.com/comm/jobs/alerts\">Manage alerts</a><a href=\"https://www.linkedin.com/psettings/\">Settings</a></body></html>",
+    "expected_jobs": [
+      ["4325834703", "Head of Product", "Selby Jennings", "Singapore"],
+      ["4418114331", "Bureau Product Head", "ADVANCE.AI", "Singapore"],
+      ["4438487998", "Lead/Principal Product Manager", "Kerry Consulting", "Singapore River"],
+      ["4440230946", "Vice President - Digital Customer Platform", "Great Eastern", "Singapore"],
+      ["4440693506", "Chief Product Owner, Clearing & Margining", "Standard Chartered Singapore", "Singapore"],
+      ["4360808177", "Senior VP, Financial Supply Chain Management, Group Product Manager", "UOB", "Singapore"]
+    ]
+  },
+  {
+    "id": "fixture-tokyo",
+    "from_": "LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>",
+    "subject": "“Director of Product”: doda (デューダ) - 【CEO室（PdM）】ディープランニングのリーディングカンパニー◆グロース上場◆米Google出資 posted on 7/16/26",
+    "email_ts": "2026-07-18T03:57:00+00:00",
+    "body_html": "<html><body><a href=\"https://www.linkedin.com/notifications/\">Notifications</a><a href=\"https://www.linkedin.com/comm/jobs/search-results/?keywords=Director%20of%20Product\">Your job alert</a><a href=\"https://www.linkedin.com/comm/jobs/view/4441610940/?trackingId=sample\"><span>【CEO室（PdM）】ディープランニングのリーディングカンパニー◆グロース上場◆米Google出資</span><span>doda (デューダ) · Tokyo</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4441617824/?trackingId=sample\"><span>【田町】事業開発／プロダクト推進（AI領域）◆AI時代の新市場創出への挑戦【BS】</span><span>doda (デューダ) · Tokyo</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4441626190/?trackingId=sample\"><span>【渋谷】グロースマーケター/ディレクター◆年間休日125日／CMでおなじみ・IT領域の人材紹介◆</span><span>doda (デューダ) · Tokyo</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4441623541/?trackingId=sample\"><span>---------------------------------------------------------</span><span>【池袋】ディレクター（PO）◆医療機関向け業務支援システム／自社サービスの企画・改善／年休124日</span><span>doda (デューダ) · Tokyo</span></a><a href=\"https://www.linkedin.com/comm/jobs/view/4441611988/?trackingId=sample\"><span>---------------------------------------------------------</span><span>【六本木】CPO候補◆医療ヘルスケア人材PF横断のプロダクト戦略・組織強化を牽引&lt;人材PF&gt;</span><span>doda (デューダ) · Tokyo</span></a><a href=\"https://www.linkedin.com/comm/jobs/alerts\">Manage alerts</a><a href=\"https://www.linkedin.com/job-alert-email-unsubscribe\">Unsubscribe</a></body></html>",
+    "expected_jobs": [
+      ["4441610940", "【CEO室（PdM）】ディープランニングのリーディングカンパニー◆グロース上場◆米Google出資", "doda (デューダ)", "Tokyo"],
+      ["4441617824", "【田町】事業開発／プロダクト推進（AI領域）◆AI時代の新市場創出への挑戦【BS】", "doda (デューダ)", "Tokyo"],
+      ["4441626190", "【渋谷】グロースマーケター/ディレクター◆年間休日125日／CMでおなじみ・IT領域の人材紹介◆", "doda (デューダ)", "Tokyo"],
+      ["4441623541", "【池袋】ディレクター（PO）◆医療機関向け業務支援システム／自社サービスの企画・改善／年休124日", "doda (デューダ)", "Tokyo"],
+      ["4441611988", "【六本木】CPO候補◆医療ヘルスケア人材PF横断のプロダクト戦略・組織強化を牽引<人材PF>", "doda (デューダ)", "Tokyo"]
+    ]
+  }
+]

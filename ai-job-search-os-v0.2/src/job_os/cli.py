@@ -1,82 +1,272 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import json
+import re
 from collections import Counter
+from email import policy
+from email.parser import BytesParser
+from email.utils import parseaddr
+from pathlib import Path
 
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
 
-DISCOVERY_QUERY = 'newer_than:30d (from:(linkedin.com) OR from:(linkedin.com/jobs) OR subject:("jobs" "LinkedIn")) -has:attachment'
-INGEST_QUERY_TEMPLATE = 'newer_than:30d from:{sender} subject:("{subject_token}") -has:attachment'
+DISCOVERY_QUERY = (
+    "newer_than:30d from:linkedin.com -has:attachment -in:spam -in:trash"
+)
+
+
+def _raw_mime_message(raw: bytes, message_id: str) -> dict:
+    mime = BytesParser(policy=policy.default).parsebytes(raw)
+    text_parts: list[str] = []
+    html_parts: list[str] = []
+    for part in mime.walk():
+        if part.get_content_disposition() == "attachment" or part.get_filename():
+            continue
+        if part.get_content_type() == "text/plain":
+            text_parts.append(part.get_content())
+        elif part.get_content_type() == "text/html":
+            html_parts.append(part.get_content())
+    return {
+        "id": message_id,
+        "payload": {
+            "headers": [
+                {"name": "Date", "value": mime.get("Date", "")},
+                {"name": "From", "value": mime.get("From", "")},
+                {"name": "Subject", "value": mime.get("Subject", "")},
+            ]
+        },
+        "text": "".join(text_parts),
+        "html": "".join(html_parts),
+    }
+
+
+def _connector_message(item: dict, index: int) -> dict:
+    message_id = str(item.get("id") or item.get("message_id") or f"input-{index}")
+    raw_mime = item.get("raw_mime")
+    if raw_mime:
+        return _raw_mime_message(raw_mime.encode("utf-8"), message_id)
+    raw_mime_base64url = item.get("raw_mime_base64url")
+    if raw_mime_base64url:
+        padding = "=" * (-len(raw_mime_base64url) % 4)
+        return _raw_mime_message(
+            base64.urlsafe_b64decode(raw_mime_base64url + padding), message_id
+        )
+    if item.get("payload") and any(
+        key in item for key in ("text", "html", "body_text", "body_html", "body")
+    ):
+        return {"id": message_id, **item}
+    return {
+        "id": message_id,
+        "payload": {
+            "headers": [
+                {"name": "Date", "value": str(item.get("email_ts") or item.get("date") or "")},
+                {"name": "From", "value": str(item.get("from_") or item.get("from") or "")},
+                {"name": "Subject", "value": str(item.get("subject") or "")},
+            ]
+        },
+        "text": str(
+            item.get("body_text") or item.get("text") or item.get("body") or ""
+        ),
+        "html": str(item.get("body_html") or item.get("html") or ""),
+    }
+
+
+def load_json_messages(path: str | Path) -> list[dict]:
+    data = json.loads(Path(path).read_text())
+    if isinstance(data, dict):
+        for key in ("emails", "messages", "responses"):
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+    if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+        raise ValueError("input JSON must be a message list or contain emails/messages/responses")
+    return [_connector_message(item, index) for index, item in enumerate(data, 1)]
+
+
+def load_raw_mime_messages(paths: list[str]) -> list[dict]:
+    return [
+        _raw_mime_message(Path(path).read_bytes(), Path(path).stem)
+        for path in paths
+    ]
+
+
+def _input_messages(args, query: str | None = None) -> list[dict]:
+    if args.input_json:
+        return load_json_messages(args.input_json)
+    if args.raw_mime:
+        return load_raw_mime_messages(args.raw_mime)
+    if query is None:
+        raise SystemExit("A confirmed --query is required for live Gmail ingestion.")
+    service = gmail_service()
+    return [
+        get_message(service, item["id"])
+        for item in list_messages(service, query, args.max_results)
+    ]
+
+
+def _subject_pattern(subject: str) -> str | None:
+    if re.search(r"\bposted on\s+\d", subject, re.I):
+        return "posted on"
+    if re.search(r"\S.+\sat\s.+\S", subject, re.I):
+        return "title at company"
+    return None
+
+
+def proposed_gmail_query(senders: Counter[str], patterns: Counter[str]) -> str | None:
+    if not senders:
+        return None
+    sender = senders.most_common(1)[0][0]
+    clauses: list[str] = []
+    if patterns["posted on"]:
+        clauses.append('subject:"posted on"')
+    if patterns["title at company"]:
+        clauses.append('subject:" at "')
+    subject_clause = ""
+    if len(clauses) == 1:
+        subject_clause = f" {clauses[0]}"
+    elif clauses:
+        subject_clause = " {" + " ".join(clauses) + "}"
+    return (
+        f"newer_than:30d from:{sender}{subject_clause} "
+        "-has:attachment -in:spam -in:trash"
+    )
 
 
 def discover_alert_query(args):
-    service = gmail_service()
-    messages = [get_message(service, item["id"]) for item in list_messages(service, DISCOVERY_QUERY, args.max_results)]
-    senders = Counter()
-    subjects = Counter()
+    messages = _input_messages(args, DISCOVERY_QUERY)
+    senders: Counter[str] = Counter()
+    patterns: Counter[str] = Counter()
     samples = []
-    for msg in messages:
-        headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+    for message in messages:
+        headers = {
+            header["name"]: header["value"]
+            for header in message.get("payload", {}).get("headers", [])
+        }
+        jobs = parse_alert_message(message)
         sender = headers.get("From", "")
+        address = parseaddr(sender)[1].lower()
         subject = headers.get("Subject", "")
-        if "linkedin" in (sender + subject).lower():
-            senders[sender] += 1
-            subjects[subject] += 1
-            samples.append({"id": msg["id"], "from": sender, "subject": subject, "date": headers.get("Date", "")})
+        if not jobs or not address.endswith("linkedin.com"):
+            continue
+        senders[address] += 1
+        if pattern := _subject_pattern(subject):
+            patterns[pattern] += 1
+        samples.append(
+            {
+                "id": message["id"],
+                "from": address,
+                "subject": subject,
+                "date": headers.get("Date", ""),
+                "job_count": len(jobs),
+            }
+        )
     print("Discovery query used:", DISCOVERY_QUERY)
     print("Sample matched metadata:")
     for sample in samples[:10]:
         print(sample)
-    if senders and subjects:
-        sender = senders.most_common(1)[0][0]
-        token = subjects.most_common(1)[0][0].split()[0].strip(':"') or "jobs"
-        print("Proposed Gmail query:", INGEST_QUERY_TEMPLATE.format(sender=sender, subject_token=token))
+    print("Observed subject patterns:", dict(patterns))
+    proposed = proposed_gmail_query(senders, patterns)
+    if proposed:
+        print("Proposed Gmail query:", proposed)
+        print("Confirmation required: copy this query into ingest --query for live Gmail reads.")
     else:
-        print("No LinkedIn alert pattern found. Do not ingest until discovery confirms the sender/subject.")
+        print("No structurally valid LinkedIn alert pattern found. Do not ingest.")
 
 
 def ingest(args):
-    service = gmail_service()
-    conn = connect(args.db)
+    messages = _input_messages(args, args.query)
+    conn = None if args.dry_run else connect(args.db)
     total = inserted = duplicates = 0
-    for item in list_messages(service, args.query, args.max_results):
-        msg = get_message(service, item["id"])
-        for job in parse_alert_message(msg):
-            total += 1
-            if args.dry_run:
-                print({"message_id": job.gmail_message_id, "job_id": job.job_identifier, "title": job.title, "company": job.company, "location": job.location, "canonical_url": job.canonical_job_url})
-            elif insert_job(conn, job):
-                inserted += 1
-            else:
-                duplicates += 1
-    print({"parsed": total, "inserted": inserted, "duplicates": duplicates, "dry_run": args.dry_run})
+    rejected: Counter[str] = Counter()
+    try:
+        for message in messages:
+            for job in parse_alert_message(message, rejected):
+                total += 1
+                if args.dry_run:
+                    print(
+                        {
+                            "message_id": job.gmail_message_id,
+                            "job_id": job.job_identifier,
+                            "title": job.title,
+                            "company": job.company,
+                            "location": job.location,
+                            "canonical_url": job.canonical_job_url,
+                        }
+                    )
+                elif insert_job(conn, job):
+                    inserted += 1
+                else:
+                    duplicates += 1
+    finally:
+        if conn is not None:
+            conn.close()
+    print(
+        {
+            "parsed": total,
+            "inserted": inserted,
+            "duplicates": duplicates,
+            "dry_run": args.dry_run,
+            "rejected_links": dict(sorted(rejected.items())),
+        }
+    )
 
 
 def not_yet(args):
-    raise SystemExit(f"{args.command} is reserved for a later milestone and is intentionally not implemented yet.")
+    raise SystemExit(
+        f"{args.command} is reserved for a later milestone and is intentionally not implemented yet."
+    )
+
+
+def _add_input_options(parser: argparse.ArgumentParser) -> None:
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--input-json", help="connector-exported Gmail message JSON")
+    source.add_argument(
+        "--raw-mime",
+        action="append",
+        help="RFC822 .eml input; repeat for multiple messages",
+    )
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="job-os")
     sub = parser.add_subparsers(dest="command", required=True)
-    d = sub.add_parser("discover-alert-query")
-    d.add_argument("--max-results", type=int, default=25)
-    d.set_defaults(func=discover_alert_query)
-    i = sub.add_parser("ingest")
-    i.add_argument("--dry-run", action="store_true")
-    i.add_argument("--query", default=DISCOVERY_QUERY)
-    i.add_argument("--max-results", type=int, default=25)
-    i.add_argument("--db", default="job_os.sqlite")
-    i.set_defaults(func=ingest)
-    for name in ["enrich", "evaluate", "check-watchlist", "generate-strategy", "digest", "list-jobs", "add-job", "update-status"]:
-        p = sub.add_parser(name)
+    discovery = sub.add_parser("discover-alert-query")
+    discovery.add_argument("--max-results", type=int, default=25)
+    _add_input_options(discovery)
+    discovery.set_defaults(func=discover_alert_query)
+
+    ingestion = sub.add_parser("ingest")
+    ingestion.add_argument("--dry-run", action="store_true")
+    ingestion.add_argument(
+        "--query",
+        help="confirmed Gmail query copied from discover-alert-query",
+    )
+    ingestion.add_argument("--max-results", type=int, default=25)
+    ingestion.add_argument("--db", default="job_os.sqlite")
+    _add_input_options(ingestion)
+    ingestion.set_defaults(func=ingest)
+
+    for name in [
+        "enrich",
+        "evaluate",
+        "check-watchlist",
+        "generate-strategy",
+        "digest",
+        "list-jobs",
+        "add-job",
+        "update-status",
+    ]:
+        command = sub.add_parser(name)
         if name == "generate-strategy":
-            p.add_argument("job_id")
-        p.set_defaults(func=not_yet)
+            command.add_argument("job_id")
+        command.set_defaults(func=not_yet)
     args = parser.parse_args(argv)
     return args.func(args)
+
 
 if __name__ == "__main__":
     main()

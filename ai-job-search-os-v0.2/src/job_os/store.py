@@ -252,6 +252,84 @@ CREATE TABLE IF NOT EXISTS job_requirement_human_reviews (
 );
 CREATE INDEX IF NOT EXISTS idx_job_requirement_human_reviews_requirement
 ON job_requirement_human_reviews(requirement_row_id, reviewed_at);
+
+CREATE TABLE IF NOT EXISTS opportunity_fit_scores (
+  id INTEGER PRIMARY KEY,
+  job_id INTEGER NOT NULL REFERENCES jobs(id),
+  mapping_run_id INTEGER NOT NULL REFERENCES job_evidence_mapping_runs(id),
+  scoring_version TEXT NOT NULL,
+  job_content_checksum TEXT NOT NULL,
+  candidate_evidence_checksum TEXT NOT NULL,
+  mapping_version TEXT NOT NULL,
+  calibration_versions_json TEXT NOT NULL,
+  scoring_config_checksum TEXT NOT NULL,
+  assessment_manifest_checksum TEXT NOT NULL,
+  opportunity_fit_score REAL NOT NULL CHECK(opportunity_fit_score >= 0 AND opportunity_fit_score <= 100),
+  pre_gate_fit_score REAL NOT NULL CHECK(pre_gate_fit_score >= 0 AND pre_gate_fit_score <= 100),
+  evidence_confidence_score REAL NOT NULL CHECK(evidence_confidence_score >= 0 AND evidence_confidence_score <= 100),
+  provisional_classification TEXT NOT NULL CHECK(provisional_classification IN ('A', 'B', 'C')),
+  hard_constraint_failed INTEGER NOT NULL DEFAULT 0,
+  hard_constraints_json TEXT NOT NULL DEFAULT '[]',
+  dimension_breakdown_json TEXT NOT NULL,
+  contribution_manifest_json TEXT NOT NULL,
+  excluded_requirements_json TEXT NOT NULL DEFAULT '[]',
+  review_reasons_json TEXT NOT NULL DEFAULT '[]',
+  confidence_components_json TEXT NOT NULL,
+  scored_at TEXT NOT NULL,
+  UNIQUE(
+    job_id, scoring_version, job_content_checksum,
+    candidate_evidence_checksum, mapping_version,
+    scoring_config_checksum, assessment_manifest_checksum
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_opportunity_fit_scores_job
+ON opportunity_fit_scores(job_id, scored_at);
+CREATE TRIGGER IF NOT EXISTS protect_opportunity_fit_scores_update
+BEFORE UPDATE ON opportunity_fit_scores
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity fit scores are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_opportunity_fit_scores_delete
+BEFORE DELETE ON opportunity_fit_scores
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity fit scores are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS opportunity_score_review_plans (
+  id INTEGER PRIMARY KEY,
+  score_id INTEGER NOT NULL REFERENCES opportunity_fit_scores(id),
+  planning_version TEXT NOT NULL,
+  scoring_config_checksum TEXT NOT NULL,
+  current_score REAL NOT NULL,
+  conservative_lower_bound REAL NOT NULL,
+  plausible_upper_bound REAL NOT NULL,
+  classification_range_json TEXT NOT NULL,
+  classification_stability TEXT NOT NULL,
+  score_needed_next_band REAL NOT NULL,
+  review_priority TEXT NOT NULL CHECK(review_priority IN (
+    'no_review_needed', 'optional_review', 'targeted_review', 'blocking_review'
+  )),
+  feasibility_results_json TEXT NOT NULL,
+  blockers_json TEXT NOT NULL DEFAULT '[]',
+  unresolved_manifest_json TEXT NOT NULL DEFAULT '[]',
+  prioritized_review_items_json TEXT NOT NULL DEFAULT '[]',
+  requirements_before_prioritization INTEGER NOT NULL,
+  requirements_after_prioritization INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE(score_id, planning_version, scoring_config_checksum)
+);
+CREATE INDEX IF NOT EXISTS idx_opportunity_score_review_plans_score
+ON opportunity_score_review_plans(score_id, created_at);
+CREATE TRIGGER IF NOT EXISTS protect_opportunity_score_review_plans_update
+BEFORE UPDATE ON opportunity_score_review_plans
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity score review plans are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_opportunity_score_review_plans_delete
+BEFORE DELETE ON opportunity_score_review_plans
+BEGIN
+  SELECT RAISE(ABORT, 'opportunity score review plans are immutable');
+END;
 """
 
 

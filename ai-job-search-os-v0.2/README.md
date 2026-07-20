@@ -89,7 +89,7 @@ PYTHONPATH=src python3 -m job_os.cli show-evidence-map --job-id 1 --db job_os.sq
 
 `map-evidence` is deterministic and retry-safe. By default it selects only `eligible` and `conditionally_eligible` jobs whose descriptions are marked complete. A blocked job can be mapped only by naming it with `--job-id`, adding `--human-override`, and recording an `--override-reason`; this exception remains inspectable in the mapping run.
 
-Requirements retain their exact source span, source snapshot, and job-content checksum. Candidate mappings retain cited claims, resolved verified leaves, explicit unsupported gaps, and the candidate-evidence checksum. `show-evidence-map` opens SQLite read-only and reports freshness; a job-content or candidate-evidence checksum change makes the prior mapping stale. Unsupported or absent evidence never becomes affirmative evidence, and exact language levels and metric units are preserved. No numerical score or opportunity grade is calculated.
+Requirements retain their exact source span, source snapshot, and job-content checksum. Candidate mappings retain cited claims, resolved verified leaves, explicit unsupported gaps, and the candidate-evidence checksum. `show-evidence-map` opens SQLite read-only and reports freshness; a job-content or candidate-evidence checksum change makes the prior mapping stale. Unsupported or absent evidence never becomes affirmative evidence, and exact language levels and metric units are preserved. Mapping and calibration do not themselves calculate a score.
 
 Calibrate deterministic mappings with provider-neutral captured AI proposals, inspect the local review queue, and record an explicit human decision without overwriting either machine result:
 
@@ -104,3 +104,22 @@ PYTHONPATH=src python3 -m job_os.cli review-evidence-map \
 ```
 
 AI proposals are immutable, retain provider/model metadata, and are validated against the candidate-evidence index. Unknown IDs, unsupported gaps used as affirmative evidence, metric or attribution changes, leadership-scope upgrades, and hard-constraint overrides are rejected. Business/native Japanese or Mandarin requirements remain deterministic hard failures when validated proficiency is lower. Review-queue inspection is read-only; human decisions are appended separately.
+
+## Opportunity Fit Scoring v1
+
+Score only eligible, complete opportunities whose latest evidence mappings and calibrations are fresh:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli score-opportunities \
+  --db job_os.sqlite --job-id 1 --job-id 6
+PYTHONPATH=src python3 -m job_os.cli show-opportunity-score \
+  --job-id 1 --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli show-score-review-plan \
+  --job-id 6 --db job_os.sqlite
+```
+
+The score is configuration-driven through `config/scoring.yaml`. Opportunity fit and evidence confidence are separate values: missing dimensions and ambiguous evidence reduce confidence without creating fit credit. Geography and business/native Japanese or Mandarin requirements are non-compensating hard gates. Each immutable score retains the mapping, calibration, job-content, candidate-evidence, reviewed-assessment, and scoring-configuration fingerprints plus dimension and requirement-level contributions. Repeating a score with the same inputs reuses the existing record; a checksum, calibration, or human-review change makes it stale.
+
+`show-opportunity-score` opens SQLite read-only and explains the provisional A/B/C result from dimensions down to individual requirements. This checkpoint does not calculate Company Fit, apply a desired-company bonus, tailor application materials, automate a watchlist, or create a daily digest.
+
+Scoring review plans keep target geography separate from current residence, relocation willingness, work authorization, and sponsorship availability. A verified residence conflict is a non-compensating hard failure; unknown authorization, sponsorship, or relocation facts remain manual feasibility blockers. Review planning calculates conservative and plausible score bounds without granting unsupported requirements hypothetical evidence. It selects at most five questions according to classification impact, protected scope, mapping validity, and high-weight dimension impact. Generic partial or unsupported assessments do not create review work on their own, and stable low-potential C records produce no optional review queue.

@@ -31,6 +31,12 @@ from .mapping_calibration import (
     review_requirement,
     show_review_queue,
 )
+from .opportunity_score_inspection import show_opportunity_score
+from .score_review_inspection import show_score_review_plan
+from .opportunity_scoring import (
+    DEFAULT_SCORING_CONFIG_PATH,
+    score_opportunities,
+)
 from .gmail import get_message, gmail_service, list_messages
 from .parser import parse_alert_message
 from .store import connect, insert_job
@@ -454,6 +460,60 @@ def review_evidence_command(args):
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
+def score_opportunities_command(args):
+    conn = connect(args.db)
+    try:
+        result = score_opportunities(
+            conn,
+            job_ids=args.job_id,
+            scoring_config_path=args.scoring_config,
+            candidate_evidence_path=args.candidate_evidence_path,
+        )
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_opportunity_score_command(args):
+    database = Path(args.db).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        result = show_opportunity_score(
+            conn,
+            args.job_id,
+            scoring_config_path=args.scoring_config,
+            candidate_evidence_path=args.candidate_evidence_path,
+        )
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_score_review_plan_command(args):
+    database = Path(args.db).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        result = show_score_review_plan(
+            conn,
+            args.job_id,
+            scoring_config_path=args.scoring_config,
+            candidate_evidence_path=args.candidate_evidence_path,
+        )
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
 def _add_input_options(parser: argparse.ArgumentParser) -> None:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input-json", help="connector-exported Gmail message JSON")
@@ -562,8 +622,40 @@ def main(argv=None):
     )
     review.set_defaults(func=review_evidence_command)
 
+    scoring = sub.add_parser("score-opportunities")
+    scoring.add_argument("--job-id", action="append", type=int)
+    scoring.add_argument("--db", default="job_os.sqlite")
+    scoring.add_argument(
+        "--scoring-config", default=str(DEFAULT_SCORING_CONFIG_PATH)
+    )
+    scoring.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    scoring.set_defaults(func=score_opportunities_command)
+
+    score_inspection = sub.add_parser("show-opportunity-score")
+    score_inspection.add_argument("--job-id", type=int, required=True)
+    score_inspection.add_argument("--db", default="job_os.sqlite")
+    score_inspection.add_argument(
+        "--scoring-config", default=str(DEFAULT_SCORING_CONFIG_PATH)
+    )
+    score_inspection.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    score_inspection.set_defaults(func=show_opportunity_score_command)
+
+    review_plan_inspection = sub.add_parser("show-score-review-plan")
+    review_plan_inspection.add_argument("--job-id", type=int, required=True)
+    review_plan_inspection.add_argument("--db", default="job_os.sqlite")
+    review_plan_inspection.add_argument(
+        "--scoring-config", default=str(DEFAULT_SCORING_CONFIG_PATH)
+    )
+    review_plan_inspection.add_argument(
+        "--candidate-evidence-path", default=str(DEFAULT_CANDIDATE_EVIDENCE_PATH)
+    )
+    review_plan_inspection.set_defaults(func=show_score_review_plan_command)
+
     for name in [
-        "evaluate",
         "check-watchlist",
         "generate-strategy",
         "digest",

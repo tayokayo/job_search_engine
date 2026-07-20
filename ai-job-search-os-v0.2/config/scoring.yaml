@@ -1,14 +1,92 @@
-opportunity_weights:
-  functional_fit: 18
-  domain_fit: 16
-  seniority_scope: 15
-  verified_evidence_fit: 15
-  leadership_scope: 10
-  career_trajectory: 8
-  geography: 6
-  language_feasibility: 5
-  ai_relevance: 4
-  desired_company: 3
+opportunity_fit_v1:
+  version: opportunity-fit-v1.1
+  assessment_values:
+    confirmed: 1.0
+    partial: 0.5
+    unsupported: 0.0
+    contradicted: 0.0
+    unknown: 0.0
+  importance_multipliers:
+    mandatory: 1.0
+    preferred: 0.35
+    unspecified: 1.0
+  dimensions:
+    functional_fit:
+      weight: 30
+      categories: [responsibilities, functional_experience, technical_skills, other_explicit_constraints]
+    domain_fit:
+      weight: 20
+      categories: [domain_experience]
+    seniority_and_scope:
+      weight: 15
+      categories: [seniority, years_of_experience, education]
+    leadership_scope:
+      weight: 15
+      categories: [leadership_scope]
+    career_trajectory:
+      weight: 10
+      categories: []
+      keywords: [career trajectory, career progression]
+      keyword_categories: [seniority, other_explicit_constraints]
+    commercial_or_operational_relevance:
+      weight: 5
+      categories: [commercial_or_operational_ownership]
+      keywords: [commercial, revenue, cost, operations, operational, performance management]
+      keyword_categories: [responsibilities, functional_experience, other_explicit_constraints]
+    ai_relevance:
+      weight: 5
+      categories: []
+      keywords: [artificial intelligence, generative ai, machine learning, llm, nlp]
+      keyword_categories: [responsibilities, functional_experience, technical_skills, domain_experience, other_explicit_constraints]
+  feasibility_categories: [geography, language]
+  target_geographies:
+    Japan/Tokyo: [japan, tokyo]
+    Singapore: [singapore]
+    Thailand/Bangkok: [thailand, bangkok]
+    Taiwan/Taipei: [taiwan, taipei]
+    United States/New York: [united states, new york, nyc]
+  duplicate_similarity_threshold: 0.82
+  confidence:
+    assessment_certainty:
+      confirmed: 1.0
+      partial: 0.8
+      unsupported: 0.9
+      contradicted: 1.0
+      unknown: 0.2
+    component_weights:
+      assessment_quality: 0.55
+      dimension_coverage: 0.25
+      review_resolution: 0.20
+    unknown_penalty: 15
+    adequate_minimum: 70
+  classification:
+    apply_minimum: 80
+    investigate_minimum: 60
+    material_dimension_weight: 10
+  review_planning:
+    version: score-review-plan-v1
+    max_items: 5
+    semantic_confidence_minimum: 0.80
+    high_weight_dimension_minimum: 15
+    material_score_impact_minimum: 3
+    protected_scope_patterns:
+      - p&l
+      - profit and loss
+      - direct reports
+      - hiring authority
+      - hire and fire
+      - paid acquisition
+      - budget
+      - engineering leadership
+      - engineering management
+    protected_gap_ids:
+      - gap_pnl_ownership_01
+      - gap_budget_01
+      - gap_direct_reports_01
+      - gap_people_authority_01
+      - gap_paid_acquisition_01
+      - gap_software_engineering_management_01
+      - gap_ml_engineering_leadership_01
 company_weights:
   background_fit: 20
   operating_complexity: 15
@@ -18,10 +96,3 @@ company_weights:
   international_environment: 10
   future_role_likelihood: 10
   desired_company: 10
-hard_constraints:
-- outside target geography
-- business/native Japanese required
-- business/native Chinese/Mandarin required
-classification:
-  A_min: 80
-  B_min: 60

@@ -1,0 +1,46 @@
+{
+  "format_version": "company-research-v1",
+  "captured_at": "2026-07-20T00:00:00+00:00",
+  "provider": "sanitized-test-capture",
+  "companies": [
+    {
+      "company_id": "alpha-holdings",
+      "canonical_name": "Alpha Holdings",
+      "legal_name": "Alpha Holdings Ltd.",
+      "aliases": [{"value": "Alpha Group", "evidence_url": "https://alpha.example/about"}],
+      "domains": [{"domain": "alpha.example", "kind": "corporate", "verified": true, "evidence_url": "https://alpha.example/about"}],
+      "target_markets": ["Singapore"],
+      "identity_confidence": 0.98,
+      "identity_evidence": [{"url": "https://alpha.example/about", "statement": "Sanitized parent identity evidence."}]
+    },
+    {
+      "company_id": "alpha-market",
+      "canonical_name": "Alpha Market",
+      "parent_company_id": "alpha-holdings",
+      "aliases": [{"value": "Alpha Marketplace", "evidence_url": "https://alpha.example/market"}],
+      "domains": [{"domain": "market.alpha.example", "kind": "operating_brand", "verified": true, "evidence_url": "https://alpha.example/market"}],
+      "target_markets": ["Singapore", "Thailand"],
+      "identity_confidence": 0.99,
+      "identity_evidence": [{"url": "https://alpha.example/market", "statement": "Sanitized subsidiary identity evidence."}]
+    },
+    {
+      "company_id": "example-recruiting",
+      "canonical_name": "Example Recruiting",
+      "aliases": [],
+      "domains": [{"domain": "recruiting.example", "kind": "corporate", "verified": true, "evidence_url": "https://recruiting.example/about"}],
+      "target_markets": ["Singapore"],
+      "identity_confidence": 0.99,
+      "identity_evidence": [{"url": "https://recruiting.example/about", "statement": "Sanitized staffing intermediary evidence."}]
+    }
+  ],
+  "facts": [
+    {"fact_id": "alpha-background", "company_id": "alpha-market", "version": 1, "dimension": "candidate_background_fit", "statement": "The company operates a consumer marketplace.", "source_url": "https://alpha.example/market", "source_type": "official_corporate", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "business_model", "freshness_days": 1095, "confidence": 0.95, "status": "accepted", "fit_value": 1.0},
+    {"fact_id": "alpha-complexity", "company_id": "alpha-market", "version": 1, "dimension": "operating_complexity", "statement": "The platform operates in multiple countries.", "source_url": "https://alpha.example/market", "source_type": "official_corporate", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "business_model", "freshness_days": 1095, "confidence": 0.95, "status": "accepted", "fit_value": 0.9},
+    {"fact_id": "alpha-product-ops", "company_id": "alpha-market", "version": 1, "dimension": "product_operations_intersection", "statement": "The marketplace connects product and merchant operations.", "source_url": "https://alpha.example/market", "source_type": "official_corporate", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "business_model", "freshness_days": 1095, "confidence": 0.95, "status": "accepted", "fit_value": 1.0},
+    {"fact_id": "alpha-ai", "company_id": "alpha-market", "version": 1, "dimension": "ai_transformation_relevance", "statement": "An official announcement describes an AI commerce program.", "source_url": "https://alpha.example/news/ai", "source_type": "official_announcement", "published_date": "2026-06-01", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "strategy", "freshness_days": 540, "confidence": 0.9, "status": "accepted", "fit_value": 0.8},
+    {"fact_id": "alpha-geography", "company_id": "alpha-market", "version": 1, "dimension": "geographic_fit", "statement": "The company operates in Singapore and Thailand.", "source_url": "https://alpha.example/market", "source_type": "official_corporate", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "business_model", "freshness_days": 1095, "confidence": 0.95, "status": "accepted", "fit_value": 1.0},
+    {"fact_id": "alpha-international", "company_id": "alpha-market", "version": 1, "dimension": "international_environment", "statement": "The company operates regional teams in multiple countries.", "source_url": "https://alpha.example/market", "source_type": "official_corporate", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "business_model", "freshness_days": 1095, "confidence": 0.95, "status": "accepted", "fit_value": 1.0},
+    {"fact_id": "alpha-future", "company_id": "alpha-market", "version": 1, "dimension": "future_role_likelihood", "statement": "The official careers page lists several relevant product operations openings.", "source_url": "https://alpha.example/careers", "source_type": "official_careers", "retrieved_at": "2026-07-20T00:00:00+00:00", "freshness_policy": "hiring_activity", "freshness_days": 120, "confidence": 0.9, "status": "accepted", "fit_value": 0.8}
+  ],
+  "job_relationships": []
+}

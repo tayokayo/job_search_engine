@@ -330,6 +330,215 @@ BEFORE DELETE ON opportunity_score_review_plans
 BEGIN
   SELECT RAISE(ABORT, 'opportunity score review plans are immutable');
 END;
+
+CREATE TABLE IF NOT EXISTS companies (
+  id TEXT PRIMARY KEY,
+  canonical_name TEXT NOT NULL,
+  legal_name TEXT,
+  parent_company_id TEXT REFERENCES companies(id),
+  identity_confidence REAL NOT NULL CHECK(identity_confidence >= 0 AND identity_confidence <= 1),
+  identity_evidence_json TEXT NOT NULL DEFAULT '[]',
+  identity_checksum TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_canonical_name
+ON companies(canonical_name COLLATE NOCASE);
+
+CREATE TABLE IF NOT EXISTS company_aliases (
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  alias TEXT NOT NULL,
+  alias_kind TEXT NOT NULL CHECK(alias_kind IN ('alias', 'legal_name', 'seed_label')),
+  normalized_alias TEXT NOT NULL,
+  evidence_url TEXT,
+  PRIMARY KEY(company_id, normalized_alias)
+);
+CREATE INDEX IF NOT EXISTS idx_company_aliases_normalized
+ON company_aliases(normalized_alias);
+
+CREATE TABLE IF NOT EXISTS company_domains (
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  domain TEXT NOT NULL,
+  domain_kind TEXT NOT NULL CHECK(domain_kind IN ('corporate', 'careers', 'investor_relations', 'operating_brand')),
+  verified INTEGER NOT NULL DEFAULT 0,
+  evidence_url TEXT,
+  PRIMARY KEY(company_id, domain)
+);
+
+CREATE TABLE IF NOT EXISTS company_target_markets (
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  market TEXT NOT NULL,
+  source TEXT NOT NULL,
+  PRIMARY KEY(company_id, market)
+);
+
+CREATE TABLE IF NOT EXISTS company_seed_imports (
+  id INTEGER PRIMARY KEY,
+  source_path TEXT NOT NULL,
+  source_row INTEGER NOT NULL,
+  source_company TEXT NOT NULL,
+  market TEXT NOT NULL,
+  seed_tier TEXT NOT NULL CHECK(seed_tier IN ('tier_1', 'tier_2')),
+  imported_at TEXT NOT NULL,
+  UNIQUE(source_path, source_row)
+);
+CREATE TABLE IF NOT EXISTS company_seed_import_links (
+  seed_import_id INTEGER NOT NULL REFERENCES company_seed_imports(id),
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  resolution_reason TEXT NOT NULL,
+  PRIMARY KEY(seed_import_id, company_id)
+);
+
+CREATE TABLE IF NOT EXISTS job_company_resolutions (
+  job_id INTEGER PRIMARY KEY REFERENCES jobs(id),
+  named_company_id TEXT REFERENCES companies(id),
+  underlying_company_id TEXT REFERENCES companies(id),
+  relationship TEXT NOT NULL CHECK(relationship IN (
+    'direct_employer', 'parent_company', 'official_recruitment_partner',
+    'staffing_intermediary', 'job_board', 'unknown'
+  )),
+  underlying_company_unknown INTEGER NOT NULL DEFAULT 0,
+  identity_confidence REAL NOT NULL CHECK(identity_confidence >= 0 AND identity_confidence <= 1),
+  identity_evidence_json TEXT NOT NULL DEFAULT '[]',
+  resolution_checksum TEXT NOT NULL,
+  resolved_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS company_facts (
+  id INTEGER PRIMARY KEY,
+  fact_id TEXT NOT NULL,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  version INTEGER NOT NULL,
+  dimension TEXT NOT NULL CHECK(dimension IN (
+    'candidate_background_fit', 'operating_complexity',
+    'product_operations_intersection', 'ai_transformation_relevance',
+    'geographic_fit', 'international_environment',
+    'future_role_likelihood', 'identity', 'hiring_activity'
+  )),
+  statement TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_type TEXT NOT NULL CHECK(source_type IN (
+    'official_corporate', 'official_careers', 'investor_relations',
+    'regulatory', 'official_announcement', 'reputable_reporting'
+  )),
+  published_date TEXT,
+  retrieved_at TEXT NOT NULL,
+  freshness_policy TEXT NOT NULL CHECK(freshness_policy IN (
+    'business_model', 'strategy', 'leadership', 'hiring_activity'
+  )),
+  freshness_days INTEGER NOT NULL CHECK(freshness_days > 0),
+  confidence REAL NOT NULL CHECK(confidence >= 0 AND confidence <= 1),
+  status TEXT NOT NULL CHECK(status IN ('accepted', 'rejected')),
+  rejection_reason TEXT,
+  fit_value REAL CHECK(fit_value IS NULL OR (fit_value >= 0 AND fit_value <= 1)),
+  fact_checksum TEXT NOT NULL,
+  UNIQUE(company_id, fact_id, version),
+  UNIQUE(company_id, fact_checksum)
+);
+CREATE INDEX IF NOT EXISTS idx_company_facts_company
+ON company_facts(company_id, dimension, status);
+CREATE TRIGGER IF NOT EXISTS protect_company_facts_update
+BEFORE UPDATE ON company_facts
+BEGIN
+  SELECT RAISE(ABORT, 'company facts are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_company_facts_delete
+BEFORE DELETE ON company_facts
+BEGIN
+  SELECT RAISE(ABORT, 'company facts are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS company_desired_tier_history (
+  id INTEGER PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  desired_tier TEXT NOT NULL CHECK(desired_tier IN ('tier_1', 'tier_2', 'dynamic', 'none')),
+  reason TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  source_seed_import_id INTEGER REFERENCES company_seed_imports(id),
+  event_checksum TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_company_desired_tier_history_company
+ON company_desired_tier_history(company_id, id);
+CREATE TRIGGER IF NOT EXISTS protect_company_desired_tier_history_update
+BEFORE UPDATE ON company_desired_tier_history
+BEGIN
+  SELECT RAISE(ABORT, 'desired-company history is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_company_desired_tier_history_delete
+BEFORE DELETE ON company_desired_tier_history
+BEGIN
+  SELECT RAISE(ABORT, 'desired-company history is append-only');
+END;
+
+CREATE TABLE IF NOT EXISTS company_fit_scores (
+  id INTEGER PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  scoring_version TEXT NOT NULL,
+  scoring_config_checksum TEXT NOT NULL,
+  identity_checksum TEXT NOT NULL,
+  facts_checksum TEXT NOT NULL,
+  desired_tier_checksum TEXT NOT NULL,
+  company_fit_score REAL CHECK(company_fit_score IS NULL OR (company_fit_score >= 0 AND company_fit_score <= 100)),
+  company_confidence_score REAL NOT NULL CHECK(company_confidence_score >= 0 AND company_confidence_score <= 100),
+  watch_recommendation TEXT NOT NULL CHECK(watch_recommendation IN (
+    'priority_watch', 'active_watch', 'monitor', 'do_not_watch',
+    'needs_research', 'identity_unresolved'
+  )),
+  dimension_breakdown_json TEXT NOT NULL,
+  evidence_manifest_json TEXT NOT NULL,
+  missing_research_json TEXT NOT NULL,
+  stale_facts_json TEXT NOT NULL,
+  conflict_facts_json TEXT NOT NULL,
+  scored_at TEXT NOT NULL,
+  UNIQUE(company_id, scoring_version, scoring_config_checksum, identity_checksum, facts_checksum, desired_tier_checksum)
+);
+CREATE INDEX IF NOT EXISTS idx_company_fit_scores_company
+ON company_fit_scores(company_id, id);
+CREATE TRIGGER IF NOT EXISTS protect_company_fit_scores_update
+BEFORE UPDATE ON company_fit_scores
+BEGIN
+  SELECT RAISE(ABORT, 'company fit scores are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_company_fit_scores_delete
+BEFORE DELETE ON company_fit_scores
+BEGIN
+  SELECT RAISE(ABORT, 'company fit scores are immutable');
+END;
+
+CREATE TABLE IF NOT EXISTS company_watch_history (
+  id INTEGER PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  previous_state TEXT,
+  new_state TEXT NOT NULL CHECK(new_state IN (
+    'priority_watch', 'active_watch', 'monitor', 'do_not_watch',
+    'needs_research', 'identity_unresolved'
+  )),
+  event_type TEXT NOT NULL CHECK(event_type IN (
+    'seeded', 'promoted', 'demoted', 'manual', 'dynamic_added'
+  )),
+  trigger_type TEXT NOT NULL CHECK(trigger_type IN (
+    'seed_import', 'a_opportunity', 'multiple_b_opportunities',
+    'company_fit_threshold', 'manual', 'score_recommendation'
+  )),
+  reason TEXT NOT NULL,
+  related_job_ids_json TEXT NOT NULL DEFAULT '[]',
+  actor TEXT NOT NULL,
+  event_checksum TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_company_watch_history_company
+ON company_watch_history(company_id, id);
+CREATE TRIGGER IF NOT EXISTS protect_company_watch_history_update
+BEFORE UPDATE ON company_watch_history
+BEGIN
+  SELECT RAISE(ABORT, 'company watch history is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS protect_company_watch_history_delete
+BEFORE DELETE ON company_watch_history
+BEGIN
+  SELECT RAISE(ABORT, 'company watch history is append-only');
+END;
 """
 
 

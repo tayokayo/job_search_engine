@@ -120,6 +120,39 @@ PYTHONPATH=src python3 -m job_os.cli show-score-review-plan \
 
 The score is configuration-driven through `config/scoring.yaml`. Opportunity fit and evidence confidence are separate values: missing dimensions and ambiguous evidence reduce confidence without creating fit credit. Geography and business/native Japanese or Mandarin requirements are non-compensating hard gates. Each immutable score retains the mapping, calibration, job-content, candidate-evidence, reviewed-assessment, and scoring-configuration fingerprints plus dimension and requirement-level contributions. Repeating a score with the same inputs reuses the existing record; a checksum, calibration, or human-review change makes it stale.
 
-`show-opportunity-score` opens SQLite read-only and explains the provisional A/B/C result from dimensions down to individual requirements. This checkpoint does not calculate Company Fit, apply a desired-company bonus, tailor application materials, automate a watchlist, or create a daily digest.
+`show-opportunity-score` opens SQLite read-only and explains the provisional A/B/C result from dimensions down to individual requirements. Desired-company status is excluded from Opportunity Fit and remains solely a Company Fit input.
 
 Scoring review plans keep target geography separate from current residence, relocation willingness, work authorization, and sponsorship availability. A verified residence conflict is a non-compensating hard failure; unknown authorization, sponsorship, or relocation facts remain manual feasibility blockers. Review planning calculates conservative and plausible score bounds without granting unsupported requirements hypothetical evidence. It selects at most five questions according to classification impact, protected scope, mapping validity, and high-weight dimension impact. Generic partial or unsupported assessments do not create review work on their own, and stable low-potential C records produce no optional review queue.
+
+## Company Fit and dynamic watchlist v1
+
+Import seed companies, then import provider-neutral captured public research and calculate Company Fit independently from Opportunity Fit:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli import-company-watchlist --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli import-company-research \
+  --db job_os.sqlite --research-json data/private/company_research.json
+PYTHONPATH=src python3 -m job_os.cli score-companies --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli show-company-fit \
+  --company-id shopee --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli show-watchlist --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli show-combined-decision \
+  --job-id 6 --db job_os.sqlite
+```
+
+Canonical identities preserve aliases, legal names, verified domains, target markets, parent/subsidiary relationships, and per-job employer relationships. Staffing intermediaries and job boards are never substituted for a hidden employer; unresolved opportunities retain `underlying_company_unknown` and receive no employer Company Fit.
+
+Company research consists of immutable, atomic facts with source URL, source type, retrieval time, differentiated freshness policy, confidence, acceptance decision, and bounded fit signal. Search snippets are not facts. Missing dimensions reduce Company confidence rather than being treated as negative evidence. Conflicts and stale facts remain visible and force further research. Company scores retain identity, fact, desired-tier, and scoring-configuration checksums and are idempotent for unchanged inputs.
+
+The seed list remains complete even when most companies are unresearched. Dynamic qualification can come from an A opportunity, multiple recent B opportunities, or the active-watch Company Fit threshold. Every automatic or manual watch decision is append-only. Manual desired tier and watch decisions are explicit local operations:
+
+```bash
+PYTHONPATH=src python3 -m job_os.cli set-company-tier \
+  --company-id shopee --tier tier_1 --reason "Reviewed preference" \
+  --reviewer local-reviewer --db job_os.sqlite
+PYTHONPATH=src python3 -m job_os.cli set-company-watch \
+  --company-id shopee --state priority_watch --reason "Reviewed evidence" \
+  --reviewer local-reviewer --db job_os.sqlite
+```
+
+The Company and Opportunity scores are displayed side by side and are never averaged. `show-company-fit`, `show-watchlist`, and `show-combined-decision` open SQLite read-only. Daily digests, application generation, resume tailoring, and outreach remain unimplemented.

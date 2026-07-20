@@ -87,12 +87,48 @@ opportunity_fit_v1:
       - gap_paid_acquisition_01
       - gap_software_engineering_management_01
       - gap_ml_engineering_leadership_01
-company_weights:
-  background_fit: 20
-  operating_complexity: 15
-  product_operations_intersection: 15
-  ai_transformation_relevance: 10
-  geographic_fit: 10
-  international_environment: 10
-  future_role_likelihood: 10
-  desired_company: 10
+company_fit_v1:
+  version: company-fit-v1
+  dimensions:
+    candidate_background_fit: 20
+    operating_complexity: 15
+    product_operations_intersection: 15
+    ai_transformation_relevance: 10
+    geographic_fit: 10
+    international_environment: 10
+    future_role_likelihood: 10
+    desired_company_status: 10
+  desired_company_values:
+    tier_1: 1.0
+    tier_2: 0.7
+    dynamic: 0.0
+    none: 0.0
+  recommendations:
+    priority_watch_minimum: 80
+    active_watch_minimum: 65
+    monitor_minimum: 50
+    adequate_confidence_minimum: 70
+  confidence_weights:
+    identity_certainty: 0.20
+    source_authority: 0.20
+    dimension_coverage: 0.25
+    fact_freshness: 0.15
+    conflict_quality: 0.10
+    underlying_employer_known: 0.10
+  source_authority:
+    official_corporate: 1.0
+    official_careers: 1.0
+    investor_relations: 0.95
+    regulatory: 1.0
+    official_announcement: 0.90
+    reputable_reporting: 0.70
+  freshness_days:
+    business_model: 1095
+    strategy: 540
+    leadership: 365
+    hiring_activity: 120
+  minimum_core_dimensions_for_score: 2
+  weak_core_fit_threshold: 0.35
+  dynamic_watchlist:
+    multiple_b_count: 2
+    multiple_b_period_days: 90

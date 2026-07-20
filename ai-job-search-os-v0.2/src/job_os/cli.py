@@ -21,6 +21,19 @@ from .candidate_evidence import (
     load_candidate_evidence,
     validate_candidate_evidence,
 )
+from .company_fit import (
+    DEFAULT_WATCHLIST_PATH,
+    import_company_research,
+    import_seed_watchlist,
+    score_companies,
+    set_company_watch_state,
+    set_desired_company_tier,
+)
+from .company_inspection import (
+    show_combined_decision,
+    show_company_fit,
+    show_watchlist,
+)
 from .enrichment import FixtureRetriever, PublicHttpRetriever, enrich_opportunities
 from .enrichment_inspection import show_enrichment
 from .evidence_map_inspection import show_evidence_map
@@ -514,6 +527,107 @@ def show_score_review_plan_command(args):
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
+def import_company_watchlist_command(args):
+    conn = connect(args.db)
+    try:
+        result = import_seed_watchlist(conn, args.watchlist)
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def import_company_research_command(args):
+    conn = connect(args.db)
+    try:
+        result = import_company_research(conn, args.research_json)
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def score_companies_command(args):
+    conn = connect(args.db)
+    try:
+        result = score_companies(
+            conn,
+            company_ids=args.company_id,
+            scoring_config_path=args.scoring_config,
+        )
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def set_company_tier_command(args):
+    conn = connect(args.db)
+    try:
+        result = set_desired_company_tier(
+            conn, args.company_id, args.tier,
+            reason=args.reason, reviewer=args.reviewer,
+        )
+    except (KeyError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def set_company_watch_command(args):
+    conn = connect(args.db)
+    try:
+        result = set_company_watch_state(
+            conn, args.company_id, args.state,
+            reason=args.reason, reviewer=args.reviewer,
+        )
+    except (KeyError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def _read_only_connection(database_path: str) -> sqlite3.Connection:
+    database = Path(database_path).resolve()
+    if not database.exists():
+        raise SystemExit(f"database does not exist: {database}")
+    conn = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def show_company_fit_command(args):
+    conn = _read_only_connection(args.db)
+    try:
+        result = show_company_fit(
+            conn, args.company_id, scoring_config_path=args.scoring_config
+        )
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_watchlist_command(args):
+    conn = _read_only_connection(args.db)
+    try:
+        result = show_watchlist(conn)
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def show_combined_decision_command(args):
+    conn = _read_only_connection(args.db)
+    try:
+        result = show_combined_decision(conn, args.job_id)
+    except KeyError as exc:
+        raise SystemExit(str(exc)) from exc
+    finally:
+        conn.close()
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
 def _add_input_options(parser: argparse.ArgumentParser) -> None:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--input-json", help="connector-exported Gmail message JSON")
@@ -655,8 +769,63 @@ def main(argv=None):
     )
     review_plan_inspection.set_defaults(func=show_score_review_plan_command)
 
+    company_watchlist = sub.add_parser("import-company-watchlist")
+    company_watchlist.add_argument("--db", default="job_os.sqlite")
+    company_watchlist.add_argument("--watchlist", default=str(DEFAULT_WATCHLIST_PATH))
+    company_watchlist.set_defaults(func=import_company_watchlist_command)
+
+    company_research = sub.add_parser("import-company-research")
+    company_research.add_argument("--db", default="job_os.sqlite")
+    company_research.add_argument("--research-json", required=True)
+    company_research.set_defaults(func=import_company_research_command)
+
+    company_scoring = sub.add_parser("score-companies")
+    company_scoring.add_argument("--db", default="job_os.sqlite")
+    company_scoring.add_argument("--company-id", action="append")
+    company_scoring.add_argument(
+        "--scoring-config", default=str(DEFAULT_SCORING_CONFIG_PATH)
+    )
+    company_scoring.set_defaults(func=score_companies_command)
+
+    company_tier = sub.add_parser("set-company-tier")
+    company_tier.add_argument("--company-id", required=True)
+    company_tier.add_argument(
+        "--tier", required=True, choices=["tier_1", "tier_2", "dynamic", "none"]
+    )
+    company_tier.add_argument("--reason", required=True)
+    company_tier.add_argument("--reviewer", required=True)
+    company_tier.add_argument("--db", default="job_os.sqlite")
+    company_tier.set_defaults(func=set_company_tier_command)
+
+    company_watch = sub.add_parser("set-company-watch")
+    company_watch.add_argument("--company-id", required=True)
+    company_watch.add_argument(
+        "--state", required=True,
+        choices=["priority_watch", "active_watch", "monitor", "do_not_watch", "needs_research", "identity_unresolved"],
+    )
+    company_watch.add_argument("--reason", required=True)
+    company_watch.add_argument("--reviewer", required=True)
+    company_watch.add_argument("--db", default="job_os.sqlite")
+    company_watch.set_defaults(func=set_company_watch_command)
+
+    company_fit_inspection = sub.add_parser("show-company-fit")
+    company_fit_inspection.add_argument("--company-id", required=True)
+    company_fit_inspection.add_argument("--db", default="job_os.sqlite")
+    company_fit_inspection.add_argument(
+        "--scoring-config", default=str(DEFAULT_SCORING_CONFIG_PATH)
+    )
+    company_fit_inspection.set_defaults(func=show_company_fit_command)
+
+    watchlist_inspection = sub.add_parser("show-watchlist")
+    watchlist_inspection.add_argument("--db", default="job_os.sqlite")
+    watchlist_inspection.set_defaults(func=show_watchlist_command)
+
+    combined_inspection = sub.add_parser("show-combined-decision")
+    combined_inspection.add_argument("--job-id", type=int, required=True)
+    combined_inspection.add_argument("--db", default="job_os.sqlite")
+    combined_inspection.set_defaults(func=show_combined_decision_command)
+
     for name in [
-        "check-watchlist",
         "generate-strategy",
         "digest",
         "list-jobs",
